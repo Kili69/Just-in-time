@@ -23,7 +23,7 @@ Pre-Reqs:
 
 1.	Installation process
 1.1. Tier 1 local user management server
-Provide a Windows Server 2012 or higher for the Tier 1 local administrator management
+Provide a Windows Server 2016 or higher for the Tier 1 local administrator management
 1.2. copy scripts
 copy the powershell scripts of this solution to  a directory with read privleged for any authenticated users
 1.2. Organizational Unit
