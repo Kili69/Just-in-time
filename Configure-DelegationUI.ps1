@@ -487,7 +487,7 @@ Add-Type -TypeDefinition @'
         param(
             [Parameter (Mandatory=$true)][string]$AdObjectDN
         )
-        $DomainDNS = (($AdObjectDN.tolower()).substring($AdObjectDN.tolower().IndexOf('dc=')+3).replace(“,dc=”,“.”))
+        $DomainDNS = (($AdObjectDN.tolower()).substring($AdObjectDN.tolower().IndexOf('dc=')+3).replace(ï¿½,dc=ï¿½,ï¿½.ï¿½))
         return $DomainDNS
     }
 
@@ -1324,13 +1324,13 @@ process {
         #Remove-Variable -Name objFullDelegationList -Scope Script -Force
         $objForm.Close()
         $objForm.dispose()
-        Remove-Variable -Name objClassFilter -Force
-        Remove-Variable -Name ADBrowserResult -Force
-        Remove-Variable -Name objFullDelegationList -Force
-        Remove-Variable -Name DefaultJiTADCnfgObjectDN -Force
-        Remove-Variable -Name JitCnfgObjClassName -Force
-        Remove-Variable -Name JiTAdSearchbase -Force
-        Remove-Variable -Name JitDelegationObjClassName -Force
+        Remove-Variable -Name objClassFilter -Force -ErrorAction SilentlyContinue
+        Remove-Variable -Name ADBrowserResult -Force -ErrorAction SilentlyContinue
+        Remove-Variable -Name objFullDelegationList -Force -ErrorAction SilentlyContinue
+        Remove-Variable -Name DefaultJiTADCnfgObjectDN -Force -ErrorAction SilentlyContinue
+        Remove-Variable -Name JitCnfgObjClassName -Force -ErrorAction SilentlyContinue
+        Remove-Variable -Name JiTAdSearchbase -Force -ErrorAction SilentlyContinue
+        Remove-Variable -Name JitDelegationObjClassName -Force -ErrorAction SilentlyContinue
     })
 
 #endregion
