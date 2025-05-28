@@ -1567,30 +1567,14 @@ end {
     }
 
     #clean varables 
-    if (Get-Variable DefaultJiTADCnfgObjectDN -Scope Global -ErrorAction SilentlyContinue) {
-        Remove-Variable -Name DefaultJiTADCnfgObjectDN -Force
-    }
-    if (Get-Variable JitCnfgObjClassName -Scope Global -ErrorAction SilentlyContinue) {
-        Remove-Variable -Name JitCnfgObjClassName -Force
-    }
-    if (Get-Variable JiTAdSearchbase -Scope Global -ErrorAction SilentlyContinue) {
-        Remove-Variable -Name JiTAdSearchbase -Force
-    }
-    if (Get-Variable JitDelegationObjClassName -Scope Global -ErrorAction SilentlyContinue) {
-        Remove-Variable -Name JitDelegationObjClassName -Force
-    }
-    if (Get-Variable STGroupManagementTaskName -Scope Global -ErrorAction SilentlyContinue) {
-        Remove-Variable -Name STGroupManagementTaskName -Force
-    }
-    if (Get-Variable StGroupManagementTaskPath -Scope Global -ErrorAction SilentlyContinue) {
-        Remove-Variable -Name StGroupManagementTaskPath -Force
-    }
-    if (Get-Variable STElevateUser -Scope Global -ErrorAction SilentlyContinue) {
-        Remove-Variable -Name STElevateUser -Force
-    }
-    if (Get-Variable DefaultSetupRegPath -Scope Global -ErrorAction SilentlyContinue) {
-        Remove-Variable -Name DefaultSetupRegPath -Force
-    }
+    Remove-Variable -Name DefaultJiTADCnfgObjectDN -Force -ErrorAction SilentlyContinue
+    Remove-Variable -Name JitCnfgObjClassName -Force -ErrorAction SilentlyContinue
+    Remove-Variable -Name JiTAdSearchbase -Force -ErrorAction SilentlyContinue
+    Remove-Variable -Name JitDelegationObjClassName -Force -ErrorAction SilentlyContinue
+    Remove-Variable -Name STGroupManagementTaskName -Force -ErrorAction SilentlyContinue
+    Remove-Variable -Name StGroupManagementTaskPath -Force -ErrorAction SilentlyContinue
+    Remove-Variable -Name STElevateUser -Force -ErrorAction SilentlyContinue
+    Remove-Variable -Name DefaultSetupRegPath -Force -ErrorAction SilentlyContinue
 }
 
 
