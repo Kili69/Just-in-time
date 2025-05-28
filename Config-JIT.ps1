@@ -653,11 +653,13 @@ begin {
                         }
                     }
                     14 {
-                        $result = Set-JitCnfgValue -Value $global:config.TaskRunInterval -Msg "Define task run interval (minutes)" -Threshold 240 -ValueIsInt
-                        #string-based result must be 'x'
-                        if ($result.GetType() -ne "String") {
-                            $global:config.TaskRunInterval = [int]$result
-                            $CnfgObjTaskRunIntervalDone = $true
+                        if (!$UpdateOnly) {
+                            $result = Set-JitCnfgValue -Value $global:config.TaskRunInterval -Msg "Define task run interval (minutes)" -Threshold 240 -ValueIsInt
+                            #string-based result must be 'x'
+                            if ($result.GetType() -ne "String") {
+                                $global:config.TaskRunInterval = [int]$result
+                                $CnfgObjTaskRunIntervalDone = $true
+                            }
                         }
                     }
                     15 {
@@ -702,7 +704,6 @@ begin {
                                 if (IsDNFormat -DNString $Principal) {
                                     $tdom = Get-DomainDNSfromDN -AdObjectDN $Principal
                                     $tPrinc = Get-ADObject -Identity $result -Properties ObjectSid -Server $tdom
-
                                 } else {
                                     $tdom = (Get-ADDomain).DNSRoot
                                     $tPrinc = Get-ADObject -filter {(samaccountname -eq $result) -or (name -eq $result)} -Properties objectsid -Server $tdom
@@ -797,7 +798,7 @@ begin {
         param(
             [Parameter (Mandatory=$true)][string]$AdObjectDN
         )
-        $DomainDNS = (($AdObjectDN.tolower()).substring($AdObjectDN.tolower().IndexOf('dc=')+3).replace(�,dc=�,�.�))
+        $DomainDNS = (($AdObjectDN.tolower()).substring($AdObjectDN.tolower().IndexOf('dc=')+3).replace(',dc=','.'))
         return $DomainDNS
     }
 
