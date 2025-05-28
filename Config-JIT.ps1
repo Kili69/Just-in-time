@@ -125,6 +125,8 @@ possibility of such damages
 .PARAMETER AddServer
     To to add an additional server acting as JiT admin server
     Multiple servers will share one JiT configuration
+    NOT YET IMPLEMENTED
+
 #>
 
 [CmdletBinding(DefaultParameterSetName = "FullConfig",SupportsShouldProcess)]
@@ -1076,10 +1078,11 @@ begin {
         $defaultJiTContainerName = "Just-In-Time Administration"
         $defaultJiTDelegationContainerName = "Delegations"
         $defaultJiTCnfgName = "JiT-Configuration"
-        $JitCnfgADDN = $DefaultJiTADCnfgObjectDN
-        if (!($JiTCnfgName)) {
-            $JiTCnfgName = $defaultJiTCnfgName
+        if ($JiTCnfgName) {
             $JitCnfgADDN = ("CN=$($JiTCnfgName),CN=$($defaultJiTContainerName),$($baseAdPath)")
+        } else {
+            $JiTCnfgName = $defaultJiTCnfgName
+            $JitCnfgADDN = $DefaultJiTADCnfgObjectDN
         }
 
         #remove old AD config object
@@ -1473,7 +1476,7 @@ process {
     if ($PSCmdlet.ParameterSetName -eq "UpdateConfig") {
         # check for valid configuration before doing some updates
         try {
-            if ((Get-ItemProperty -Path $DefaultSetupRegPath -Name "ConfigStatus" -ErrorAction Stop).SetupStatus -eq 2004) { 
+            if ((Get-ItemProperty -Path $DefaultSetupRegPath -Name "ConfigStatus" -ErrorAction Stop).ConfigStatus -eq 2004) { 
                 #region re-define all configuration items as configured
                 [bool]$CnfgObjSchemaExtDone = $true
                 [bool]$CnfgObjADStructureDone = $true
@@ -1535,6 +1538,9 @@ process {
 
             #writing configuration
             if (Write-JitConfig2AD -JiTCnfgName $NewCnfgObjName) {
+                Write-Host 
+                Write-Host "New JiT configuration successfully written to AD !" -ForegroundColor Yellow
+                Write-Host "This function is NOT fully implemented yet !!!" -ForegroundColor Yellow
             } else {
                 Write-Host "New JiT configuration could not be written to AD - aborting ..." -ForegroundColor Red
                 $success = $false
@@ -1545,6 +1551,10 @@ process {
         }
     }
 
+    if ($PSCmdlet.ParameterSetName -eq "AddServer") {
+        Write-Host "This function is not yet implemented ..." -ForegroundColor Yellow
+        $success = $false
+    }
 }
 
 end {
@@ -1557,14 +1567,30 @@ end {
     }
 
     #clean varables 
-    Remove-Variable -Name DefaultJiTADCnfgObjectDN -Force
-    Remove-Variable -Name JitCnfgObjClassName  -Force
-    Remove-Variable -Name JiTAdSearchbase  -Force
-    Remove-Variable -Name JitDelegationObjClassName  -Force
-    Remove-Variable -Name STGroupManagementTaskName  -Force
-    Remove-Variable -Name StGroupManagementTaskPath  -Force
-    Remove-Variable -Name STElevateUser  -Force
-    Remove-Variable -Name DefaultSetupRegPath   -Force
+    if (Get-Variable DefaultJiTADCnfgObjectDN -Scope Global -ErrorAction SilentlyContinue) {
+        Remove-Variable -Name DefaultJiTADCnfgObjectDN -Force
+    }
+    if (Get-Variable JitCnfgObjClassName -Scope Global -ErrorAction SilentlyContinue) {
+        Remove-Variable -Name JitCnfgObjClassName -Force
+    }
+    if (Get-Variable JiTAdSearchbase -Scope Global -ErrorAction SilentlyContinue) {
+        Remove-Variable -Name JiTAdSearchbase -Force
+    }
+    if (Get-Variable JitDelegationObjClassName -Scope Global -ErrorAction SilentlyContinue) {
+        Remove-Variable -Name JitDelegationObjClassName -Force
+    }
+    if (Get-Variable STGroupManagementTaskName -Scope Global -ErrorAction SilentlyContinue) {
+        Remove-Variable -Name STGroupManagementTaskName -Force
+    }
+    if (Get-Variable StGroupManagementTaskPath -Scope Global -ErrorAction SilentlyContinue) {
+        Remove-Variable -Name StGroupManagementTaskPath -Force
+    }
+    if (Get-Variable STElevateUser -Scope Global -ErrorAction SilentlyContinue) {
+        Remove-Variable -Name STElevateUser -Force
+    }
+    if (Get-Variable DefaultSetupRegPath -Scope Global -ErrorAction SilentlyContinue) {
+        Remove-Variable -Name DefaultSetupRegPath -Force
+    }
 }
 
 
