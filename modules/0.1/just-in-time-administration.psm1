@@ -57,6 +57,12 @@ if (!(Get-Variable JiTAdSearchbase -Scope Global -ErrorAction SilentlyContinue))
 if (!(Get-Variable JitDelegationObjClassName -Scope Global -ErrorAction SilentlyContinue)) {
     Set-Variable -name JitDelegationObjClassName -value "jiT-DelegationObject" -Scope Global -Option ReadOnly
 }
+#if (!(Get-Variable config -Scope Global -ErrorAction SilentlyContinue)) {
+#    Set-Variable -name config -value (Get-JITconfig) -Scope Global -Option ReadOnly
+#}
+#if (!(Get-Variable objFullDelegationList -Scope Global -ErrorAction SilentlyContinue)) {
+#    Set-Variable -name objFullDelegationList -value (Get-JitDelegation) -Scope Global
+#}
 
 
 #region general functions
