@@ -249,7 +249,7 @@ Add-Type -TypeDefinition @'
             [Parameter(mandatory=$True)][String]$DelegationDN
         )
 
-        $result = Remove-JitDelegation -DelegationObject $DelegationDN -RemoveDelegationWithoutValidation 
+        $result = Remove-JitDelegation -DelegationObject $DelegationDN -RemoveDelegationWithoutValidation -Force
         return $result
     }
 
@@ -576,11 +576,11 @@ $SelectedAdPrincipalDN = ""
 Set-Variable -name objClassFilter -Scope Global -Option AllScope
  
 if ($Mode -eq "SelectADPrincipals") {
-    $objClassFilter = "ADPrincipals"
+    $global:objClassFilter = "ADPrincipals"
 } elseif ($Mode -eq "SelectDelegationObject") {
-    $objClassFilter = "OU+Computer"
+    $global:objClassFilter = "OU+Computer"
 } else {
-    $objClassFilter = "All"
+    $global:objClassFilter = "All"
 }
 
 #region initializing form    
@@ -809,7 +809,7 @@ if ($Mode -eq "SelectDelegationObject") {
 
         #if no classFilter --> apply "All"
         $classMatch = $false
-        if ($objClassFilter -eq "All") {
+        if ($global:objClassFilter -eq "All") {
             $classMatch = $true
         } else {
             #check if dn is NOT domain root
@@ -817,18 +817,18 @@ if ($Mode -eq "SelectDelegationObject") {
                 [string]$strDN = $dn
                 $objClass = (Get-ADObject -Filter 'DistinguishedName -eq $strDN' -Server (&$GetDomainDNSfromDN -AdObjectDN $strDN)).objectClass
                 # view OUs even if class filter is set to something else
-                if ((($objClassFilter -eq "OU") -or ($objClassFilter -eq "OU+Computer")) -and ($objClass.toLower() -eq "organizationalunit")) {
+                if ((($global:objClassFilter -eq "OU") -or ($global:objClassFilter -eq "OU+Computer")) -and ($objClass.toLower() -eq "organizationalunit")) {
                     $classMatch = $true
-                } elseif ((($objClassFilter -eq "Computer") -or ($objClassFilter -eq "OU+Computer")) -and ($objClass.toLower() -eq "computer")) {
+                } elseif ((($global:objClassFilter -eq "Computer") -or ($global:objClassFilter -eq "OU+Computer")) -and ($objClass.toLower() -eq "computer")) {
                     $classMatch = $true
-                } elseif (($objClassFilter -eq "ADPrincipals") -and (($objClass.toLower() -eq "user") -or ($objClass.toLower() -eq "group"))) {
+                } elseif (($global:objClassFilter -eq "ADPrincipals") -and (($objClass.toLower() -eq "user") -or ($objClass.toLower() -eq "group"))) {
                     $classMatch = $true
                 } elseif ($objClass.toLower() -eq "domainDNS") {
                     $classMatch = $true
                 }
             } else {
                 #dn is domain root
-                if (($objClassFilter -eq "OU")) {
+                if (($global:objClassFilter -eq "OU")) {
                     $classMatch = $true
                 }
             }
@@ -851,7 +851,7 @@ if ($Mode -eq "SelectDelegationObject") {
 
                 #if no classFilter --> apply "All"
                 $classMatch = $false
-                if ($objClassFilter -eq "All") {
+                if ($global:objClassFilter -eq "All") {
                     $classMatch = $true
                 } else {
                     #check if dn is NOT domain root
@@ -859,12 +859,12 @@ if ($Mode -eq "SelectDelegationObject") {
                         [string]$strDN = $dn
                         $objClass = (Get-ADObject -Filter 'DistinguishedName -eq $strDN' -Server (Get-DomainDNSfromDN -AdObjectDN $strDN)).objectClass
                         # view OUs even if class filter is set to something else
-                        #if ((($objClassFilter -eq "OU") -or ($objClassFilter -eq "Computer") -or ($objClassFilter -eq "ADPrincipals") -or ($objClassFilter -eq "OU+Computer")) -and ($objClass.toLower() -eq "organizationalunit")) {
+                        #if ((($global:objClassFilter -eq "OU") -or ($global:objClassFilter -eq "Computer") -or ($global:objClassFilter -eq "ADPrincipals") -or ($global:objClassFilter -eq "OU+Computer")) -and ($objClass.toLower() -eq "organizationalunit")) {
                         if (($objClass.toLower() -eq "organizationalunit")) {
                             $classMatch = $true
-                        } elseif ((($objClassFilter -eq "Computer") -or ($objClassFilter -eq "OU+Computer")) -and ($objClass.toLower() -eq "computer")) {
+                        } elseif ((($global:objClassFilter -eq "Computer") -or ($global:objClassFilter -eq "OU+Computer")) -and ($objClass.toLower() -eq "computer")) {
                             $classMatch = $true
-                        } elseif (($objClassFilter -eq "ADPrincipals") -and (($objClass.toLower() -eq "user") -or ($objClass.toLower() -eq "group"))) {
+                        } elseif (($global:objClassFilter -eq "ADPrincipals") -and (($objClass.toLower() -eq "user") -or ($objClass.toLower() -eq "group"))) {
                             $classMatch = $true
                         } elseif ($objClass.toLower() -eq "domainDNS") {
                             $classMatch = $true
@@ -944,7 +944,7 @@ if ($Mode -eq "SelectDelegationObject") {
         $objDelegateButton.Enabled = $false
         $objDelegateButton.IsAccessible = $false
         $objSelectButton.Visible = $false
-        $objClassFilter = "ADPrincipals"
+        #$global:objClassFilter = "ADPrincipals"
         $objAdBrowserLabel.Text = "Select AD principal to be delegated"
         #$objDelegationSelectLabel.Text = ($objADTree.SelectedNode.Tag.ToString()).substring(7)
         $objDelegationSelectTextBox.Text = ($objADTree.SelectedNode.Tag.ToString()).substring(7)
@@ -1325,6 +1325,12 @@ process {
         $objForm.Close()
         $objForm.dispose()
         Remove-Variable -Name objClassFilter -Force
+        Remove-Variable -Name ADBrowserResult -Force
+        Remove-Variable -Name objFullDelegationList -Force
+        Remove-Variable -Name DefaultJiTADCnfgObjectDN -Force
+        Remove-Variable -Name JitCnfgObjClassName -Force
+        Remove-Variable -Name JiTAdSearchbase -Force
+        Remove-Variable -Name JitDelegationObjClassName -Force
     })
 
 #endregion

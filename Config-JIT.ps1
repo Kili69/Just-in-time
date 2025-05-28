@@ -11,7 +11,7 @@ all implied warranties including, without limitation, any implied warranties of 
 or of fitness for a particular purpose. The entire risk arising out of the use or performance of 
 the sample scripts and documentation remains with you. In no event shall Microsoft, its authors, 
 or anyone else involved in the creation, production, or delivery of the scripts be liable for any 
-damages whatsever (including, without limitation, damages for loss of business profits, business 
+damages whatsoever (including, without limitation, damages for loss of business profits, business 
 interruption, loss of business information, or other pecuniary loss) arising out of the use of or 
 inability to use the sample scripts or documentation, even if Microsoft has been advised of the 
 possibility of such damages
@@ -102,18 +102,29 @@ possibility of such damages
    Version 0.1.20250107
         - by Andreas Luy
     - added (OperatingSystem=*Server*) to T1ldapfilter
-   Version 0.1.20250127
-        - by Andreas Luy
-    - completely re-written to add
-        menue structure, AD-based configuration, addressing configuration changes and server farms
  
 
 .PARAMETER InstallationDirectory
     Installation directory
-.PARAMETER AdvancedSetup
-    This switch provides additional properties during the setup
-.PARAMETER configurationFile
-    For unattended installation 
+.PARAMETER NewCnfgObjName
+    Intended to create additional Jit configuration objects, so that different 
+    JiT configurations can be used by different admin groups
+    NOT YET IMPLEMENTED
+.PARAMETER UpdateConfig
+    To change initial JiT configuration
+    THE FOLLOWING ITEMS CANNOT BE CHANGED 
+    due to dependencies of sharing the configuration between multiple servers:
+    - Multi-domain support
+    - JiT-GROUP NAMING
+    - JiT-Group OU
+    - Default domain for JiT server
+    - gMSA 
+    - JiT Eventlog
+    - JiT Elevation EventID
+    - Scheduled Tasks settings
+.PARAMETER AddServer
+    To to add an additional server acting as JiT admin server
+    Multiple servers will share one JiT configuration
 #>
 
 [CmdletBinding(DefaultParameterSetName = "FullConfig",SupportsShouldProcess)]
@@ -179,7 +190,7 @@ begin {
         Write-Host 
         Write-Host "Raise forest and domain functional level to 'Windows 2016'" -ForegroundColor Magenta
         Write-Host "Before continuing with JIT" -ForegroundColor Yellow
-        Write-Host "Aborting!" -ForegroundColor Red
+        Write-Host "Aborting!" -ForegroundColor Yellow
         $exit = $true
         Exit 0x1
     }
@@ -230,6 +241,7 @@ begin {
         Set-Variable -name STElevateUser -value "Elevate User" -Scope Script -Option ReadOnly #Is the name of the Schedule task to elevate users
     }
     if (!(Get-Variable config -Scope Global -ErrorAction SilentlyContinue)) {
+        #Set-Variable -name config -value (Get-JITconfig) -Scope Global -Option AllScope
         Set-Variable -name config -Scope Global -Option AllScope
     }
     if (!(Get-Variable DefaultJitProgramFolder -Scope Global -ErrorAction SilentlyContinue)) {
@@ -275,7 +287,7 @@ begin {
     [bool]$JiTCnfgDone = $false
     #endregion
 
-    #registry values
+    #registry values defined
     # SetupStatus
     # only set with 'FullInstall' and 'AddServer'
     # 1000 - no installation yet
@@ -416,6 +428,9 @@ begin {
 
     function ConfigurationMenu 
     {
+	    Param (
+		    [Parameter(Mandatory=$false)][switch]$UpdateOnly
+        )
 
         #region new window size
         if ($host.name -eq 'ConsoleHost') {
@@ -445,26 +460,26 @@ begin {
 
     # Start the menu loop
         while (!$exit) {
-            #Clear-Host  # Clear the console to keep it clean
+            Clear-Host  # Clear the console to keep it clean
             Write-Host "============ Just-in-Time Configuration Menu ============"
             Write-Host " 1." -NoNewline; Write-Host " JiT schema extention                       --> " -NoNewline -ForegroundColor Yellow; Write-Host ($(if($CnfgObjSchemaExtDone){"done"}else{"open"})) -ForegroundColor $(if($CnfgObjSchemaExtDone){"Green"}else{"Red"})
             Write-Host " 2." -NoNewline; Write-Host " JiT AD structure                           --> " -NoNewline -ForegroundColor Yellow; Write-Host ($(if($CnfgObjADStructureDone){"done"}else{"open"})) -ForegroundColor $(if($CnfgObjADStructureDone){"Green"}else{"Red"})
-            Write-Host " 3." -NoNewline; Write-Host " Enable/disable multi-domain support        --> " -NoNewline -ForegroundColor Yellow; Write-Host ($(if($CnfgObjEnableMultiDomainSupportDone){"done"}else{"open"})) -NoNewline -ForegroundColor $(if($CnfgObjEnableMultiDomainSupportDone){"Green"}else{"Red"}); if($CnfgObjEnableMultiDomainSupportDone){Write-Host "--> $($global:config.EnableMultiDomainSupport)"}else{Write-Host ""}
-            Write-Host " 4." -NoNewline; Write-Host " Define OU for JiT admin groups             --> " -NoNewline -ForegroundColor Yellow; Write-Host ($(if($CnfgObjJitAdmGroupOUDone){"done"}else{"open"})) -NoNewline -ForegroundColor $(if($CnfgObjJitAdmGroupOUDone){"Green"}else{"Red"}); if($CnfgObjJitAdmGroupOUDone){Write-Host "--> $($global:config.OU)"}else{Write-Host ""}
-            Write-Host " 5." -NoNewline; Write-Host " Define prefix for JiT-groups               --> " -NoNewline -ForegroundColor Yellow; Write-Host ($(if($CnfgObjAdminPreFixDone){"done"}else{"open"})) -NoNewline -ForegroundColor $(if($CnfgObjAdminPreFixDone){"Green"}else{"Red"}); if($CnfgObjAdminPreFixDone){Write-Host "--> $($global:config.AdminPreFix)"}else{Write-Host ""}
-            Write-Host " 6." -NoNewline; Write-Host " Set default domain for JiT mgmt servers    --> " -NoNewline -ForegroundColor Yellow; Write-Host ($(if($CnfgObjDomainDone){"done"}else{"open"})) -NoNewline -ForegroundColor $(if($CnfgObjDomainDone){"Green"}else{"Red"}); if($CnfgObjDomainDone){Write-Host "--> $($global:config.Domain)"}else{Write-Host ""}
+            Write-Host " 3." -NoNewline; Write-Host " Enable/disable multi-domain support        --> " -NoNewline -ForegroundColor $(if($UpdateOnly){"Gray"}else{"Yellow"}); Write-Host ($(if($CnfgObjEnableMultiDomainSupportDone){"done"}else{"open"})) -NoNewline -ForegroundColor $(if($CnfgObjEnableMultiDomainSupportDone){"Green"}else{"Red"}); if($CnfgObjEnableMultiDomainSupportDone){Write-Host "--> $($global:config.EnableMultiDomainSupport)"}else{Write-Host ""}
+            Write-Host " 4." -NoNewline; Write-Host " Define OU for JiT admin groups             --> " -NoNewline -ForegroundColor $(if($UpdateOnly){"Gray"}else{"Yellow"}); Write-Host ($(if($CnfgObjJitAdmGroupOUDone){"done"}else{"open"})) -NoNewline -ForegroundColor $(if($CnfgObjJitAdmGroupOUDone){"Green"}else{"Red"}); if($CnfgObjJitAdmGroupOUDone){Write-Host "--> $($global:config.OU)"}else{Write-Host ""}
+            Write-Host " 5." -NoNewline; Write-Host " Define prefix for JiT-groups               --> " -NoNewline -ForegroundColor $(if($UpdateOnly){"Gray"}else{"Yellow"}); Write-Host ($(if($CnfgObjAdminPreFixDone){"done"}else{"open"})) -NoNewline -ForegroundColor $(if($CnfgObjAdminPreFixDone){"Green"}else{"Red"}); if($CnfgObjAdminPreFixDone){Write-Host "--> $($global:config.AdminPreFix)"}else{Write-Host ""}
+            Write-Host " 6." -NoNewline; Write-Host " Set default domain for JiT mgmt servers    --> " -NoNewline -ForegroundColor $(if($UpdateOnly){"Gray"}else{"Yellow"}); Write-Host ($(if($CnfgObjDomainDone){"done"}else{"open"})) -NoNewline -ForegroundColor $(if($CnfgObjDomainDone){"Green"}else{"Red"}); if($CnfgObjDomainDone){Write-Host "--> $($global:config.Domain)"}else{Write-Host ""}
             Write-Host " 7." -NoNewline; Write-Host " Set Name(s) of Tier0 computer group(s)`r`n    -> multiple Tier0 groups are allowed       --> " -NoNewline -ForegroundColor Yellow; Write-Host ($(if($CnfgObjTier0ServerGroupNameDone){"done"}else{"open"})) -NoNewline -ForegroundColor $(if($CnfgObjTier0ServerGroupNameDone){"Green"}else{"Red"}); if($CnfgObjTier0ServerGroupNameDone){Write-Host "--> $($global:config.Tier0ServerGroupName)" -Separator ";"}else{Write-Host ""}
             Write-Host " 8." -NoNewline; Write-Host " Define LDAP filters to Tier1 systems       --> " -NoNewline -ForegroundColor Yellow; Write-Host ($(if($CnfgObjLDAPT1ComputersDone){"done"}else{"open"})) -NoNewline -ForegroundColor $(if($CnfgObjLDAPT1ComputersDone){"Green"}else{"Red"}); if($CnfgObjLDAPT1ComputersDone){Write-Host "--> $($global:config.LDAPT1Computers)"}else{Write-Host ""}
             Write-Host " 9." -NoNewline; Write-Host " Set Tier1 computers OUs (optional)-if not`r`n    specified, whole domain will be searched   --> " -NoNewline -ForegroundColor Yellow; Write-Host ($(if($CnfgObjT1SearchbaseDone){"done"}else{"open"})) -NoNewline -ForegroundColor $(if($CnfgObjT1SearchbaseDone){"Green"}else{"Red"}); if($CnfgObjT1SearchbaseDone){Write-Host "--> $($global:config.T1Searchbase)" -Separator ";"}else{Write-Host ""}
             Write-Host "10." -NoNewline; Write-Host " Set Max elevation time allowed for JiT     --> " -NoNewline -ForegroundColor Yellow; Write-Host ($(if($CnfgObjMaxElevatedTimeDone){"done"}else{"open"})) -NoNewline -ForegroundColor $(if($CnfgObjMaxElevatedTimeDone){"Green"}else{"Red"}); if($CnfgObjMaxElevatedTimeDone){Write-Host "--> $($global:config.MaxElevatedTime.ToString())"}else{Write-Host ""}
             Write-Host "11." -NoNewline; Write-Host " Set default elevation time used by JiT     --> " -NoNewline -ForegroundColor Yellow; Write-Host ($(if($CnfgObjDefaultElevatedTimeDone){"done"}else{"open"})) -NoNewline -ForegroundColor $(if($CnfgObjDefaultElevatedTimeDone){"Green"}else{"Red"}); if($CnfgObjDefaultElevatedTimeDone){Write-Host "--> $($global:config.DefaultElevatedTime.ToString())"}else{Write-Host ""}
             Write-Host "12." -NoNewline; Write-Host " Set max. number of systems where users`r`n    can be elevated in parallel                --> " -NoNewline -ForegroundColor Yellow; Write-Host ($(if($CnfgObjMaxConcurrentServerDone){"done"}else{"open"})) -NoNewline -ForegroundColor $(if($CnfgObjMaxConcurrentServerDone){"Green"}else{"Red"}); if($CnfgObjMaxConcurrentServerDone){Write-Host "--> $($global:config.MaxConcurrentServer.ToString())"}else{Write-Host ""}
-            Write-Host "13." -NoNewline; Write-Host " Define name of gMSA running JiT tasks      --> " -NoNewline -ForegroundColor Yellow; Write-Host ($(if($CnfgObjGroupManagedServiceAccountNameDone){"done"}else{"open"})) -NoNewline -ForegroundColor $(if($CnfgObjGroupManagedServiceAccountNameDone){"Green"}else{"Red"}); if($CnfgObjGroupManagedServiceAccountNameDone){Write-Host "--> $($global:config.GroupManagedServiceAccountName)"}else{Write-Host ""}
-            Write-Host "14." -NoNewline; Write-Host " Define task run interval (minutes)         --> " -NoNewline -ForegroundColor Yellow; Write-Host ($(if($CnfgObjTaskRunIntervalDone){"done"}else{"open"})) -NoNewline -ForegroundColor $(if($CnfgObjTaskRunIntervalDone){"Green"}else{"Red"}); if($CnfgObjTaskRunIntervalDone){Write-Host "--> $($global:config.TaskRunInterval)"}else{Write-Host ""}
+            Write-Host "13." -NoNewline; Write-Host " Define name of gMSA running JiT tasks      --> " -NoNewline -ForegroundColor $(if($UpdateOnly){"Gray"}else{"Yellow"}); Write-Host ($(if($CnfgObjGroupManagedServiceAccountNameDone){"done"}else{"open"})) -NoNewline -ForegroundColor $(if($CnfgObjGroupManagedServiceAccountNameDone){"Green"}else{"Red"}); if($CnfgObjGroupManagedServiceAccountNameDone){Write-Host "--> $($global:config.GroupManagedServiceAccountName)"}else{Write-Host ""}
+            Write-Host "14." -NoNewline; Write-Host " Define task run interval (minutes)         --> " -NoNewline -ForegroundColor $(if($UpdateOnly){"Gray"}else{"Yellow"}); Write-Host ($(if($CnfgObjTaskRunIntervalDone){"done"}else{"open"})) -NoNewline -ForegroundColor $(if($CnfgObjTaskRunIntervalDone){"Green"}else{"Red"}); if($CnfgObjTaskRunIntervalDone){Write-Host "--> $($global:config.TaskRunInterval)"}else{Write-Host ""}
             Write-Host "15." -NoNewline; Write-Host " Define central task script directory       --> " -NoNewline -ForegroundColor Yellow; Write-Host ($(if($CnfgObjTaskScriptSourceDone){"done"}else{"open"})) -NoNewline -ForegroundColor $(if($CnfgObjTaskScriptSourceDone){"Green"}else{"Red"}); if($CnfgObjTaskScriptSourceDone){Write-Host "--> $($global:config.TaskScriptSource)"}else{Write-Host ""}
-            Write-Host "16." -NoNewline; Write-Host " Define Just-in Time event log              --> " -NoNewline -ForegroundColor Yellow; Write-Host ($(if($CnfgObjEventLogDone){"done"}else{"open"})) -NoNewline -ForegroundColor $(if($CnfgObjEventLogDone){"Green"}else{"Red"}); if($CnfgObjEventLogDone){Write-Host "--> $($global:config.EventLog)"}else{Write-Host ""}
+            Write-Host "16." -NoNewline; Write-Host " Define Just-in Time event log              --> " -NoNewline -ForegroundColor $(if($UpdateOnly){"Gray"}else{"Yellow"}); Write-Host ($(if($CnfgObjEventLogDone){"done"}else{"open"})) -NoNewline -ForegroundColor $(if($CnfgObjEventLogDone){"Green"}else{"Red"}); if($CnfgObjEventLogDone){Write-Host "--> $($global:config.EventLog)"}else{Write-Host ""}
             Write-Host "17." -NoNewline; Write-Host " Define Just-in Time event source           --> " -NoNewline -ForegroundColor Yellow; Write-Host ($(if($CnfgObjEventSourceDone){"done"}else{"open"})) -NoNewline -ForegroundColor $(if($CnfgObjEventSourceDone){"Green"}else{"Red"}); if($CnfgObjEventSourceDone){Write-Host "--> $($global:config.EventSource)"}else{Write-Host ""}
-            Write-Host "18." -NoNewline; Write-Host " Set JiT elevation event ID                 --> " -NoNewline -ForegroundColor Yellow; Write-Host ($(if($CnfgObjElevateEventIDDone){"done"}else{"open"})) -NoNewline -ForegroundColor $(if($CnfgObjElevateEventIDDone){"Green"}else{"Red"}); if($CnfgObjElevateEventIDDone){Write-Host "--> $($global:config.ElevateEventID.ToString())"}else{Write-Host ""}
+            Write-Host "18." -NoNewline; Write-Host " Set JiT elevation event ID                 --> " -NoNewline -ForegroundColor $(if($UpdateOnly){"Gray"}else{"Yellow"}); Write-Host ($(if($CnfgObjElevateEventIDDone){"done"}else{"open"})) -NoNewline -ForegroundColor $(if($CnfgObjElevateEventIDDone){"Green"}else{"Red"}); if($CnfgObjElevateEventIDDone){Write-Host "--> $($global:config.ElevateEventID.ToString())"}else{Write-Host ""}
             Write-Host "19." -NoNewline; Write-Host " Set AD Principals allowed to request on`r`n    behalf of other identities                 --> " -NoNewline -ForegroundColor Yellow; Write-Host ($(if($CnfgObjRequestOnBehalfOfDone){"done"}else{"open"})) -NoNewline -ForegroundColor $(if($CnfgObjRequestOnBehalfOfDone){"Green"}else{"Red"}); if($CnfgObjRequestOnBehalfOfDone){Write-Host "--> $($global:config.RequestOnBehalfOf)" -Separator ";"}else{Write-Host ""}
             Write-Host "20." -NoNewline; Write-Host " Enable/disable delegation mode             --> " -NoNewline -ForegroundColor Yellow; Write-Host ($(if($CnfgObjEnableDelegation){"done"}else{"open"})) -NoNewline -ForegroundColor $(if($CnfgObjEnableDelegation){"Green"}else{"Red"}); if($CnfgObjEnableDelegation){Write-Host "--> $($global:config.EnableDelegation)"}else{Write-Host ""}
             Write-Host "21." -NoNewline; Write-Host " Start configuration                        --> " -NoNewline -ForegroundColor Magenta; Write-Host ($(if($JiTCnfgDone){"done"}else{"open"})) -ForegroundColor $(if($JiTCnfgDone){"Green"}else{"Red"})
@@ -510,43 +525,50 @@ begin {
                         Start-Sleep 2
                     }
                     3 {
-                        $global:config.EnableMultiDomainSupport = if ((Read-YesNoAnswer -Title "Enable/disable multi-domain support" -Message "Do you want to enable multi-domain support?") -eq 1) {$true}else{$false}
-                        $CnfgObjEnableMultiDomainSupportDone = $true
-                        if (!($global:config.EnableMultiDomainSupport)) {
-                            $global:config.Domain = [string]$ComputerDomainFQDN
-                            $CnfgObjDomainDone = $true
+                        if (!$UpdateOnly) {
+                            $global:config.EnableMultiDomainSupport = if ((Read-YesNoAnswer -Title "Enable/disable multi-domain support" -Message "Do you want to enable multi-domain support?") -eq 1) {$true}else{$false}
+                            $CnfgObjEnableMultiDomainSupportDone = $true
+                            if (!($global:config.EnableMultiDomainSupport)) {
+                                $global:config.Domain = [string]$ComputerDomainFQDN
+                                $CnfgObjDomainDone = $true
+                            }
                         }
                     }
                     4 {
-                        #default value should reflect JiT mgmt server domain location
-                        $OUFQDN = Get-DomainDNSfromDN -AdObjectDN $global:config.OU
-                        if (!($OUFQDN -eq $ComputerDomainFQDN)) {
-                            #Get-DNfromDNS -FQDN $ComputerDomainFQDN
-                            $global:config.OU = (($global:config.OU).substring(0,($global:config.OU).tolower().IndexOf('dc=')) + (Get-DNfromDNS -FQDN $ComputerDomainFQDN))
-
-                        }
-                        $result = Set-JitCnfgValue -Value $global:config.OU -Msg "Define OU for JiT admin groups" -ValueMustDN
-                        if ($result.toLower() -ne "x") {
-                            if (IsDNFormat -DNString $result) {
-                                $global:config.OU = $result
-                                $CnfgObjJitAdmGroupOUDone = $true
-                            } else {
-                                Write-Host "Invalid DN for T1 Admin Group OU"
+                        if (!$UpdateOnly) {
+                            #default value should reflect JiT mgmt server domain location
+                            $OUFQDN = Get-DomainDNSfromDN -AdObjectDN $global:config.OU
+                            if (!($OUFQDN -eq $ComputerDomainFQDN)) {
+                                #Get-DNfromDNS -FQDN $ComputerDomainFQDN
+                                $global:config.OU = (($global:config.OU).substring(0,($global:config.OU).tolower().IndexOf('dc=')) + (Get-DNfromDNS -FQDN $ComputerDomainFQDN))
+                            }
+                            $result = Set-JitCnfgValue -Value $global:config.OU -Msg "Define OU for JiT admin groups" -ValueMustDN
+                            if ($result.toLower() -ne "x") {
+                                if (IsDNFormat -DNString $result) {
+                                    $global:config.OU = $result
+                                    $CnfgObjJitAdmGroupOUDone = $true
+                                } else {
+                                    Write-Host "Invalid DN for T1 Admin Group OU"
+                                }
                             }
                         }
                     }
                     5 {
-                        $result = Set-JitCnfgValue -Value $global:config.AdminPreFix -Msg "Define prefix for JiT-groups"
-                        if ($result.toLower() -ne "x") {
-                            $global:config.AdminPreFix = $result
-                            $CnfgObjAdminPreFixDone = $true
+                        if (!$UpdateOnly) {
+                            $result = Set-JitCnfgValue -Value $global:config.AdminPreFix -Msg "Define prefix for JiT-groups"
+                            if ($result.toLower() -ne "x") {
+                                $global:config.AdminPreFix = $result
+                                $CnfgObjAdminPreFixDone = $true
+                            }
                         }
                     }
                     6 {
-                        $result = Set-JitCnfgValue -Value $global:config.Domain -Msg "Set default domain (FQDN) for JiT management servers"
-                        if ($result.toLower() -ne "x") {
-                            $global:config.Domain = $result
-                            $CnfgObjDomainDone = $true
+                        if (!$UpdateOnly) {
+                            $result = Set-JitCnfgValue -Value $global:config.Domain -Msg "Set default domain (FQDN) for JiT management servers"
+                            if ($result.toLower() -ne "x") {
+                                $global:config.Domain = $result
+                                $CnfgObjDomainDone = $true
+                            }
                         }
                     }
                     7 {
@@ -622,10 +644,12 @@ begin {
                         }
                     }
                     13 {
-                        $result = Set-JitCnfgValue -Value $global:config.GroupManagedServiceAccountName -Msg "Define name of gMSA running JiT tasks" -Threshold 14
-                        if ($result.toLower() -ne "x") {
-                            $global:config.GroupManagedServiceAccountName = $result
-                            $CnfgObjGroupManagedServiceAccountNameDone = $true
+                        if (!$UpdateOnly) {
+                            $result = Set-JitCnfgValue -Value $global:config.GroupManagedServiceAccountName -Msg "Define name of gMSA running JiT tasks" -Threshold 14
+                            if ($result.toLower() -ne "x") {
+                                $global:config.GroupManagedServiceAccountName = $result
+                                $CnfgObjGroupManagedServiceAccountNameDone = $true
+                            }
                         }
                     }
                     14 {
@@ -644,10 +668,12 @@ begin {
                         }
                     }
                     16 {
-                        $result = Set-JitCnfgValue -Value $global:config.EventLog -Msg "Define Just-in Time event log"
-                        if ($result.toLower() -ne "x") {
-                            $global:config.EventLog = $result
-                            $CnfgObjEventLogDone = $true
+                        if (!$UpdateOnly) {
+                            $result = Set-JitCnfgValue -Value $global:config.EventLog -Msg "Define Just-in Time event log"
+                            if ($result.toLower() -ne "x") {
+                                $global:config.EventLog = $result
+                                $CnfgObjEventLogDone = $true
+                            }
                         }
                     }
                     17 {
@@ -658,11 +684,13 @@ begin {
                         }
                     }
                     18 {
-                        $result = Set-JitCnfgValue -Value $global:config.ElevateEventID -Msg "Set JiT elevation event ID" -ValueIsInt
-                        #string-based result must be 'x'
-                        if ($result.GetType() -ne "String") {
-                            $global:config.ElevateEventID = [int]$result
-                            $CnfgObjElevateEventIDDone = $true
+                        if (!$UpdateOnly) {
+                            $result = Set-JitCnfgValue -Value $global:config.ElevateEventID -Msg "Set JiT elevation event ID" -ValueIsInt
+                            #string-based result must be 'x'
+                            if ($result.GetType() -ne "String") {
+                                $global:config.ElevateEventID = [int]$result
+                                $CnfgObjElevateEventIDDone = $true
+                            }
                         }
                     }
                     19 {
@@ -1443,48 +1471,57 @@ process {
 
     if ($PSCmdlet.ParameterSetName -eq "UpdateConfig") {
         # check for valid configuration before doing some updates
-        if ((Get-ItemProperty -Path $DefaultSetupRegPath -Name "ConfigStatus").ConfigStatus -eq 2004) { 
-            #region re-define all configuration items as configured
-            [bool]$CnfgObjSchemaExtDone = $true
-            [bool]$CnfgObjADStructureDone = $true
-            [bool]$CnfgObjJitAdmGroupOUDone = $true
-            [bool]$CnfgObjAdminPreFixDone = $true
-            [bool]$CnfgObjDomainDone = $true
-            [bool]$CnfgObjTier0ServerGroupNameDone = $true
-            [bool]$CnfgObjLDAPT1ComputersDone = $true
-            [bool]$CnfgObjT1SearchbaseDone = $true
-            [bool]$CnfgObjMaxElevatedTimeDone = $true
-            [bool]$CnfgObjDefaultElevatedTimeDone = $true
-            [bool]$CnfgObjMaxConcurrentServerDone = $true
-            [bool]$CnfgObjGroupManagedServiceAccountNameDone = $true
-            [bool]$CnfgObjTaskRunIntervalDone = $true
-            [bool]$CnfgObjTaskScriptSourceDone = $true
-            [bool]$CnfgObjEventLogDone = $true
-            [bool]$CnfgObjEventSourceDone = $true
-            [bool]$CnfgObjElevateEventIDDone = $true
-            [bool]$CnfgObjRequestOnBehalfOfDone = $true
-            [bool]$CnfgObjEnableMultiDomainSupportDone = $true
-            [bool]$CnfgObjEnableDelegation = $true
-            [bool]$CnfgObjDoneDomainSeparatorDone = $true
-            #[bool]$CnfgObjUseManagedByforDelegationDone = $false
-            #[bool]$CnfgObjDelegationConfigPathDone = $false
-            [bool]$JiTCnfgDone = $false
-            #endregion
+        try {
+            if ((Get-ItemProperty -Path $DefaultSetupRegPath -Name "ConfigStatus" -ErrorAction Stop).SetupStatus -eq 2004) { 
+                #region re-define all configuration items as configured
+                [bool]$CnfgObjSchemaExtDone = $true
+                [bool]$CnfgObjADStructureDone = $true
+                [bool]$CnfgObjJitAdmGroupOUDone = $true
+                [bool]$CnfgObjAdminPreFixDone = $true
+                [bool]$CnfgObjDomainDone = $true
+                [bool]$CnfgObjTier0ServerGroupNameDone = $true
+                [bool]$CnfgObjLDAPT1ComputersDone = $true
+                [bool]$CnfgObjT1SearchbaseDone = $true
+                [bool]$CnfgObjMaxElevatedTimeDone = $true
+                [bool]$CnfgObjDefaultElevatedTimeDone = $true
+                [bool]$CnfgObjMaxConcurrentServerDone = $true
+                [bool]$CnfgObjGroupManagedServiceAccountNameDone = $true
+                [bool]$CnfgObjTaskRunIntervalDone = $true
+                [bool]$CnfgObjTaskScriptSourceDone = $true
+                [bool]$CnfgObjEventLogDone = $true
+                [bool]$CnfgObjEventSourceDone = $true
+                [bool]$CnfgObjElevateEventIDDone = $true
+                [bool]$CnfgObjRequestOnBehalfOfDone = $true
+                [bool]$CnfgObjEnableMultiDomainSupportDone = $true
+                [bool]$CnfgObjEnableDelegation = $true
+                [bool]$CnfgObjDoneDomainSeparatorDone = $true
+                #[bool]$CnfgObjUseManagedByforDelegationDone = $false
+                #[bool]$CnfgObjDelegationConfigPathDone = $false
+                [bool]$JiTCnfgDone = $false
+                #endregion
 
-            #open config menue to change some settings
-            if ((ConfigurationMenu) -eq "Success") {
+                #open config menue to change some settings
+                if ((ConfigurationMenu) -eq "Success") {
 
-                #writing configuration
-                if (Write-JitConfig2AD) {
+                    #writing configuration
+                    if (Write-JitConfig2AD) {
+                        Write-Host 
+                        Write-Host "JiT configuration successfully updated !" -ForegroundColor Yellow
+                    } else {
+                        Write-Host "JiT configuration could not be written to AD - aborting ..." -ForegroundColor Red
+                        $success = $false
+                    }
                 } else {
-                    Write-Host "JiT configuration could not be written to AD - aborting ..." -ForegroundColor Red
+                    Write-Host "JiT configuration canceled ..." -ForegroundColor Red
                     $success = $false
                 }
             } else {
-                Write-Host "JiT configuration canceled ..." -ForegroundColor Red
+                Write-Host "No valid JiT configuration found ..." -ForegroundColor Red
+                Write-Host "JiT re-configuration canceled!" -ForegroundColor Red
                 $success = $false
             }
-        } else {
+        }
+        catch {
             Write-Host "No valid JiT configuration found ..." -ForegroundColor Red
             Write-Host "JiT re-configuration canceled!" -ForegroundColor Red
             $success = $false
@@ -1493,22 +1530,17 @@ process {
 
     if ($PSCmdlet.ParameterSetName -eq "NewConfig") {
 
-        if ((Read-YesNoAnswer -Title "New JiT Configuration" -Message "Do you want to create a new JiT configuration?") -eq 1) {
-            if (!$NewCnfgObjName) {
-                $NewCnfgObjName = Set-JitCnfgValue -Value "NewJiTConfig100" -Msg "Enter x500 Name for new JiT Configuration" -Threshold 48
-            }
-            if ((ConfigurationMenu) -eq "Success") {
+        if ((ConfigurationMenu) -eq "Success") {
 
-                #writing configuration
-                if (Write-JitConfig2AD -JiTCnfgName $NewCnfgObjName) {
-                } else {
-                    Write-Host "New JiT configuration could not be written to AD - aborting ..." -ForegroundColor Red
-                    $success = $false
-                }
+            #writing configuration
+            if (Write-JitConfig2AD -JiTCnfgName $NewCnfgObjName) {
             } else {
-                Write-Host "New JiT configuration canceled ..." -ForegroundColor Red
+                Write-Host "New JiT configuration could not be written to AD - aborting ..." -ForegroundColor Red
                 $success = $false
             }
+        } else {
+            Write-Host "New JiT configuration canceled ..." -ForegroundColor Red
+            $success = $false
         }
     }
 
@@ -1522,6 +1554,16 @@ end {
         Write-Host "Please review and correct any possible error before" -ForegroundColor Yellow
         Write-Host "re-running Config-Jit.ps1" -ForegroundColor Magenta
     }
+
+    #clean varables 
+    Remove-Variable -Name DefaultJiTADCnfgObjectDN -Force
+    Remove-Variable -Name JitCnfgObjClassName  -Force
+    Remove-Variable -Name JiTAdSearchbase  -Force
+    Remove-Variable -Name JitDelegationObjClassName  -Force
+    Remove-Variable -Name STGroupManagementTaskName  -Force
+    Remove-Variable -Name StGroupManagementTaskPath  -Force
+    Remove-Variable -Name STElevateUser  -Force
+    Remove-Variable -Name DefaultSetupRegPath   -Force
 }
 
 
