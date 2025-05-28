@@ -797,7 +797,7 @@ begin {
         param(
             [Parameter (Mandatory=$true)][string]$AdObjectDN
         )
-        $DomainDNS = (($AdObjectDN.tolower()).substring($AdObjectDN.tolower().IndexOf('dc=')+3).replace(“,dc=”,“.”))
+        $DomainDNS = (($AdObjectDN.tolower()).substring($AdObjectDN.tolower().IndexOf('dc=')+3).replace(ï¿½,dc=ï¿½,ï¿½.ï¿½))
         return $DomainDNS
     }
 
@@ -1501,7 +1501,7 @@ process {
                 #endregion
 
                 #open config menue to change some settings
-                if ((ConfigurationMenu) -eq "Success") {
+                if ((ConfigurationMenu -UpdateOnly) -eq "Success") {
 
                     #writing configuration
                     if (Write-JitConfig2AD) {
