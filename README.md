@@ -1,4 +1,6 @@
 # Introduction 
+**For more details read [JiT Install Guide.pdf](https://github.com/Kili69/Just-in-time/blob/main/JiT%20Install%20Guide.pdf)**
+
 This is a active directory Just-In-Time solution based on the Active Directory Version 2016 or higher and powershell scripts. The reduce the risk of a administrator ist 24x7 administrator on all or many computers. 
 The principal of this project is: Each server has a domain local group in the active directory. This group is added to the local administrators of a server via group policy.  
 A user can request local administrator privilege due writeing a event to the Tier 1 Local Administrator event log. A schedule task ist tirggered on this event. This schedule task is running as a Group Managed Service Account and add the user will be added time restricted to this group. Now the user is time restricted local administrator on a singel server.  
