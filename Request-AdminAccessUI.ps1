@@ -93,13 +93,13 @@ begin {
 
 
     if (!(Get-Variable DefaultJiTADCnfgObjectDN -Scope Global -ErrorAction SilentlyContinue)) {
-        Set-Variable -name DefaultJiTADCnfgObjectDN -value "CN=Jit-Configuration,CN=Just-In-Time Administration,CN=Services,CN=Configuration,DC=Fabrikam,DC=com" -Scope Global -Option ReadOnly
+        Set-Variable -name DefaultJiTADCnfgObjectDN -value ("CN=Jit-Configuration,CN=Just-In-Time Administration,CN=Services,"+(Get-ADRootDSE).configurationNamingContext) -Scope Global -Option ReadOnly
     }
     if (!(Get-Variable JitCnfgObjClassName -Scope Global -ErrorAction SilentlyContinue)) {
         Set-Variable -name JitCnfgObjClassName -value "JiT-ConfigurationObject" -Scope Global -Option ReadOnly
     }
     if (!(Get-Variable JiTAdSearchbase -Scope Global -ErrorAction SilentlyContinue)) {
-        Set-Variable -name JiTAdSearchbase -value "CN=Delegations,CN=Just-In-Time Administration,CN=Services,CN=Configuration,DC=Fabrikam,DC=com" -Scope Global -Option ReadOnly
+        Set-Variable -name JiTAdSearchbase -value ("CN=Delegations,CN=Just-In-Time Administration,CN=Services,"+(Get-ADRootDSE).configurationNamingContext) -Scope Global -Option ReadOnly
     }
     if (!(Get-Variable JitDelegationObjClassName -Scope Global -ErrorAction SilentlyContinue)) {
         Set-Variable -name JitDelegationObjClassName -value "jiT-DelegationObject" -Scope Global -Option ReadOnly
