@@ -15,10 +15,11 @@ JitCnfg-TaskScriptSource,64,2.5.5.12,TRUE,Script source for JiT task scheduler s
 JitCnfg-EventLog,64,2.5.5.12,TRUE,JiT event log,No
 JitCnfg-EventSource,64,2.5.5.12,TRUE,JiT event source,No
 JitCnfg-ElevateEventID,2,2.5.5.9,TRUE,Event ID used by JiT to elevate user,No
-JitCnfg-EnableMultiDomainSupport,1,2.5.5.8,TRUE,Is multi domain support enabled,No
-JitCnfg-EnableDelegation,1,2.5.5.8,TRUE,Is delegation enabled,No
+JitCnfg-EnableMultiDomainSupport,1,2.5.5.8,TRUE,Enable multi domain support,No
+JitCnfg-EnableDelegation,1,2.5.5.8,TRUE,Allows/disallows delegation mode,No
 JitCnfg-DomainSeparator,64,2.5.5.12,TRUE,Separator used for admin groups,No
 JitCnfg-AuthorizedServer,64,2.5.5.12,FALSE,Defines server that are authorized running JiT,No
+JitCnfg-EnableSelfElevation,1,2.5.5.8,TRUE,Allows/disallows self-elevation,No
 JitCnfg-RequestOnBehalfOf,64,2.5.5.12,FALSE,Defines principals which are allowed to request access on behalf of other entities,No
 JitCnfg-UseManagedByforDelegation,1,2.5.5.8,TRUE,if the ManagedBy attribute can be used (not used),No
 JitCnfg-DelegationConfigPath,64,2.5.5.12,TRUE,Path to Delegation config file (not used),No

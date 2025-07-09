@@ -2,7 +2,7 @@
 Script Info
 
 Author: Andreas Lucas/Andreas Luy [MSFT]
-Download: https://github.com/Kili69/T1JIT
+Download: https://github.com/Kili69/Just-in-time
 
 Disclaimer:
 This sample script is not supported under any Microsoft standard support program or service. 
@@ -33,6 +33,10 @@ Version 0.1.20250123
     by Andreas Luy
     completely re-written to add
     schema extension, AD structure, delegated installation and uninstallation options
+    Version 0.1.20250601
+    by Andreas Luy
+    - added support to deny self-elevation
+
 #>
 
 
@@ -144,7 +148,7 @@ begin {
         Set-Variable -name JiTAdSearchbase -value ("CN=Delegations,CN=Just-In-Time Administration,CN=Services,"+(Get-ADRootDSE).configurationNamingContext) -Scope Global -Option ReadOnly
     }
     if (!(Get-Variable JitDelegationObjClassName -Scope Global -ErrorAction SilentlyContinue)) {
-        Set-Variable -name JitDelegationObjClassName -value "jiT-DelegationObject" -Scope Global -Option ReadOnly
+        Set-Variable -name JitDelegationObjClassName -value "JiT-DelegationObject" -Scope Global -Option ReadOnly
     }
     if (!(Get-Variable DefaultJitProgramFolder -Scope Global -ErrorAction SilentlyContinue)) {
         Set-Variable -name DefaultJitProgramFolder -value ($env:ProgramFiles +"\Just-In-Time") -Scope Global -Option ReadOnly
@@ -229,7 +233,7 @@ begin {
         #the new classes are of type structural
         $ObjectCategory = 1 # --> 'Structural'
 
-        #DN name of new class objects
+        #Display name of new class objects
         $JitCnfgClassSchemaName = 'JiT-Configuration Object'
         $JitDelegationClassSchemaName = 'JiT-Delegation Object'
 
@@ -602,6 +606,7 @@ begin {
                     'JitCnfg-EventSource' = "T1Mgmt"
                     'JitCnfg-ElevateEventID' = 100
                     'JitCnfg-EnableMultiDomainSupport' = $false
+                    'JitCnfg-EnableSelfElevation' = $true
                     'JitCnfg-EnableDelegation' = $true
                     'JitCnfg-DomainSeparator' = "#"
                     'JitCnfg-UseManagedByforDelegation' = $false
@@ -870,8 +875,10 @@ begin {
 ###########
 process {
     
+    #checking if stop requirements are met 'coz
+    #pre-reqs failed
     if ($exit) {
-        Exit
+        Exit #process block
     }
 
     if ($null -ne $JitProgramFolder){
@@ -891,7 +898,7 @@ process {
     if ((!$exit) -and ($PSCmdlet.ParameterSetName -eq "FullInstall")) {
 
         #JiT schema in AD
-        $JitDelegationClassDN = 'JiT-Delegation Object'
+        $JitDelegationClassName = 'JiT-Delegation Object'
         $CnfgObjSchemaExtDone = $false
 
         #continue welcome mask
@@ -905,7 +912,7 @@ process {
             if ($IsAdmin) {
                 #create reg hive
                 if (!(Test-Path $DefaultSetupRegPath)) {
-                    Write-Host "Creating registry ..." -ForegroundColor Yellow
+                    Write-Host "Creating registry folder..." -ForegroundColor Yellow
                     try{
                         New-Item -Path $DefaultSetupRegPath | Out-Null
                         New-ItemProperty -Path $DefaultSetupRegPath -Name "SetupStatus" -PropertyType dword -Value 1000 | Out-Null
@@ -933,7 +940,7 @@ process {
                             try {
                                 Write-Host
                                 Write-Host "Checking for 'Just-in-Time' schema extensions..." -ForegroundColor Yellow
-                                Get-ADObject -Identity "CN=$($JitDelegationClassDN),$((Get-ADRootDSE).schemaNamingContext)"|Out-Null
+                                Get-ADObject -Identity "CN=$($JitDelegationClassName),$((Get-ADRootDSE).schemaNamingContext)"|Out-Null
                                 $CnfgObjSchemaExtDone = $true
                                 Write-Host "--> 'Just-in-Time' schema extensions already implemented..." -ForegroundColor Green
                                 Set-ItemProperty -Path $DefaultSetupRegPath -Name "SetupStatus" -Value 1002 | Out-Null
@@ -1106,7 +1113,7 @@ process {
 
         #checking for JiT schema in AD
         try {
-            Get-ADObject -Identity "CN=$($JitDelegationClassDN),$((Get-ADRootDSE).schemaNamingContext)"
+            Get-ADObject -Identity "CN=$($JitDelegationClassName),$((Get-ADRootDSE).schemaNamingContext)"
             $CnfgObjSchemaExtDone = $true
         } catch {
             #JiT schema missing
@@ -1213,7 +1220,15 @@ end {
                 cd $JitProgramFolder
             }
         }
-        
     }
+
+    #cleanup variables
+    Remove-Variable -name DefaultJiTADCnfgObjectDN -Scope Global -force -ErrorAction SilentlyContinue
+    Remove-Variable -name JitCnfgObjClassName -Scope Global -force -ErrorAction SilentlyContinue
+    Remove-Variable -name JiTAdSearchbase -Scope Global -force -ErrorAction SilentlyContinue
+    Remove-Variable -name JitDelegationObjClassName -Scope Global -force -ErrorAction SilentlyContinue
+    Remove-Variable -name DefaultSetupRegPath -Scope Global -force -ErrorAction SilentlyContinue
+
+
 
 }
