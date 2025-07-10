@@ -136,12 +136,20 @@ param (
     [string]$CnfgObjName,
 
     [Parameter (Mandatory=$false,
+        ParameterSetName = "FullConfig")]
+    [switch]$SkipDomainTasks,
+
+    [Parameter (Mandatory=$false,
         ParameterSetName = "NewConfig")]
     [string]$NewCnfgObjName,
 
     [Parameter (Mandatory=$false,
         ParameterSetName = "UpdateConfig")]
     [switch]$UpdateConfig,
+
+    [Parameter (Mandatory=$false,
+        ParameterSetName = "UpdateConfig")]
+    [switch]$ForceUpdate,
 
     [Parameter (Mandatory=$false,
         ParameterSetName = "AddServer")]
@@ -460,7 +468,7 @@ begin {
         $ret = "Success"
         $exit = $false
 
-    # Start the menu loop
+        # Start the menu loop
         while (!$exit) {
             Clear-Host  # Clear the console to keep it clean
             Write-Host "============ Just-in-Time Configuration Menu ============"
@@ -830,6 +838,7 @@ begin {
         return $result
     }
 
+    #might need EA/DA depending on central store --> sysvol
     function Move-CentralTaskScripts
     {
         #assuming all goes well
@@ -872,12 +881,18 @@ begin {
         return $ret
     }
 
+    #needs DA/EA
     function Configure-JiT
     {
+        param (
+            [Parameter(Mandatory = $false)]
+            [boolean]$SkipDomainActions = $false
+        ) 
+
         $success = $true
         #JiT gMSA task account
         $success = (create-gMSA -Name $global:config.GroupManagedServiceAccountName -Domain $global:config.Domain)
-        if(!$success) {
+        if(!$success -and !$SkipDomainActions) {
             Write-Host "Creating gMSA $($global:config.GroupManagedServiceAccountName) failed!" -ForegroundColor Red
         } else {
             $objGmsa = Get-ADServiceAccount -Identity $global:config.GroupManagedServiceAccountName -Server ([string]$global:config.Domain)
@@ -885,10 +900,14 @@ begin {
             if (!$success) {
                 Write-Host "Granting gMSA $($global:config.GroupManagedServiceAccountName) LogonAsBatchJob privileges failed!" -ForegroundColor Red
             } else {
-                #grant gMSA permissions on Tier 1 JiT Mgmt group OU
-                $success = Configure-JiTGroupOU -DefaultOUName $global:config.OU -objgMSA $objGmsa
-                if (!$success){
-                    Write-Host "Could not create T1 JiT OU for admin groups: $($global:config.OU)!" -ForegroundColor Red
+                if (!$SkipDomainActions) {
+                    #grant gMSA permissions on Tier 1 JiT Mgmt group OU
+                    $success = Configure-JiTGroupOU -DefaultOUName $global:config.OU -objgMSA $objGmsa -$SkipOUCreation:$SkipDomainTasks
+                    if (!$success){
+                        Write-Host "Could not create T1 JiT OU for admin groups: $($global:config.OU)!" -ForegroundColor Red
+                    }
+                } else {
+                        Write-Host "Could not create T1 JiT OU for admin groups: $($global:config.OU)!" -ForegroundColor Red
                 }
             }
         }
@@ -918,6 +937,7 @@ begin {
         return $success
     }
 
+    #needs local admin
     function create-Eventlog
     {
         #region create eventlog and register EventSource id required
@@ -958,6 +978,7 @@ begin {
         return $gmsaName
     }
 
+    #needs DA/EA
     function create-gMSA
     {
         param (
@@ -982,22 +1003,25 @@ begin {
             }
         } catch {
             if ( $Error[0].CategoryInfo.Activity -eq "New-ADServiceAccount"){
-                Write-Host "gMSA coult not be created. Validate you have the correct privileges and the KDS rootkey exists" -ForegroundColor Red
+                Write-Host "gMSA could not be created. Validate you have the correct privileges and the KDS rootkey exists" -ForegroundColor Red
                 $ret = $false
             }
             Write-Host "A error occured while creating the gMSA or apply the current computer to the gMSA. Configuration stopped" -ForegroundColor Red
-            Write-Host "Validate the gMSA exists and the computer has the privilege to retrive the gMSA password" -ForegroundColor Red
+            Write-Host "Validate the gMSA exists and the computer has the privilege to retrieve the gMSA password" -ForegroundColor Red
             $ret = $false
         }
-        #install the group managed service account locally 
-        $oGmsa = Get-ADServiceAccount -Identity $Name -Server $Domain
-        if (!(Test-ADServiceAccount -Identity $Name )){
-            #Test gMSA ...
-            try {
-                Install-ADServiceAccount -Identity $oGmsa
-            } catch {
-                Write-Host "Installation of the Group managed service account ($($Name)) failed." -ForegroundColor Red
-                $ret = $false
+        
+        if ($ret) {
+            #install the group managed service account locally 
+            $oGmsa = Get-ADServiceAccount -Identity $Name -Server $Domain
+            if (!(Test-ADServiceAccount -Identity $Name )){
+                #Test gMSA ...
+                try {
+                    Install-ADServiceAccount -Identity $oGmsa
+                } catch {
+                    Write-Host "Installation of the Group managed service account ($($Name)) failed." -ForegroundColor Red
+                    $ret = $false
+                }
             }
         }
         if ($ret) {
@@ -1009,6 +1033,7 @@ begin {
         return $ret
     }
 
+    #needs local admin
     function create-ScheduledTasks
     {
         $ret = $true
@@ -1068,6 +1093,7 @@ begin {
         return $HasSeSecurityPriv
     }
 
+    #needs DA/EA
     Function Write-JitConfig2AD
     {
 	    Param (
@@ -1150,6 +1176,7 @@ begin {
 
     <#
         This function add a SID to the "Logon as a Batch Job" privilege
+        needs local admin
     #>
     function Add-LogonAsABatchJobPrivilege 
     {
@@ -1205,6 +1232,7 @@ begin {
         return $ret
     }
 
+    #needs DA/EA
     function CreateOU 
     {
         [CmdletBinding ( SupportsShouldProcess)]
@@ -1251,22 +1279,29 @@ begin {
         Return $true
     }
 
+    #needs DA/EA
     function configure-JiTGroupOU
     {
         param (
-            [Parameter(Mandatory=$True)] [string]$DefaultOUName,
-            [Parameter(Mandatory=$True)] $objgMSA
+            [Parameter(Mandatory=$True)]
+            [string]$DefaultOUName,
+            [Parameter(Mandatory=$True)]
+            $objgMSA,
+            [Parameter(Mandatory=$false)]
+            [boolean]$SkipOUCreation = $false
         )
 
         $ret = $True
         #region Definition of the AD OU where the T1 JiT AD admin groups are stored
         try{
             if (!([ADSI]::Exists("LDAP://$DefaultOUName"))){
-                Write-Host "The OU '$DefaultOUName' doesn't exist - creating ..." -ForegroundColor Yellow
-                if (CreateOU -OUPath $DefaultOUName -DomainDNS (Get-ADDomain).DNSRoot) {
-                    Write-Host "'$DefaultOUName' succesfully created" -ForegroundColor Green
+                if (!$SkipOUCreation) {
+                    Write-Host "The OU '$DefaultOUName' doesn't exist - creating ..." -ForegroundColor Yellow
+                    if (CreateOU -OUPath $DefaultOUName -DomainDNS (Get-ADDomain).DNSRoot) {
+                        Write-Host "'$DefaultOUName' succesfully created" -ForegroundColor Green
+                    }
+                    # $OU = $null
                 }
-                # $OU = $null
             }
         } 
         catch {
@@ -1274,7 +1309,7 @@ begin {
         }
         #endregion
 
-        if ($ret) {
+        if ($ret -and !$SkipOUCreation) {
             Write-Debug  "OU $($DefaultOUName) is accessible updating ACL"
             Write-Host "Updating ACL on OU '$DefaultOUName' for $($objgMSA.name) ..." -ForegroundColor Yellow
             $aclGroupOU = Get-ACL -Path "AD:\$($DefaultOUName)"
@@ -1323,14 +1358,6 @@ begin {
     #checking if running user is Domain admin or Enterprise admin
     $forestSid = (Get-ADDomain -server (Get-ADForest).rootdomain|Select-Object domainsid).domainsid.Value
     $HasDaOrEA = (($groupTokens.Value -eq ($forestSid+"-512")) -or ($groupTokens.Value -eq ($forestSid+"-519")))
-    #exit if requirements are not met
-    if (!($IsAdmin -and $HasDaOrEA)) {
-        Write-Host "Current run account is either not local administrator or not a member of Domain/Enterprise Admins... " -ForegroundColor Red
-        Write-Host "Ensure proper permissions for run account" -ForegroundColor Red
-        Write-Host "before continuing with JIT" -ForegroundColor Yellow
-        Write-Host "Aborting!" -ForegroundColor Red
-        $exit = $true
-    }
 
     #checking if reg path exists - exit if not
     if (!(Test-Path $DefaultSetupRegPath)) {
@@ -1422,6 +1449,14 @@ process {
     #endregion
 
     if ($PSCmdlet.ParameterSetName -eq "FullConfig") {
+        #exit if requirements are not met
+        if (!($IsAdmin -and ($HasDaOrEA -or $SkipDomainTasks))) {
+            Write-Host "Current run account is either not local administrator or not a member of Domain/Enterprise Admins... " -ForegroundColor Red
+            Write-Host "Ensure proper permissions for run account" -ForegroundColor Red
+            Write-Host "before continuing with JIT" -ForegroundColor Yellow
+            Write-Host "Aborting!" -ForegroundColor Red
+            $exit = $true
+        }
         #Checking the access to the installation directory and provide the system environment variable
         #Validate the installation directory and stop execution if installation directory doesn't exists
         if (!($InstallationDirectory)){
@@ -1445,38 +1480,63 @@ process {
             Exit 0x5
         }
 
-        if ((ConfigurationMenu) -eq "Success") {
+        if (!$SkipDomainTasks) {
+            if ((ConfigurationMenu) -eq "Success") {
 
-            #writing configuration
-            if (Write-JitConfig2AD) { #continue
-                Set-ItemProperty -Path $DefaultSetupRegPath -Name "ConfigStatus" -Value 2001 | Out-Null
-                if (Configure-JiT) {
-                    Set-ItemProperty -Path $DefaultSetupRegPath -Name "ConfigStatus" -Value 2004 | Out-Null
-                    Write-Host 
-                    Write-Host "JiT configuration successfully finished !" -ForegroundColor Yellow
-                    if ($global:config.EnableDelegation){
+                #writing configuration
+                if (Write-JitConfig2AD) { #continue
+                    Set-ItemProperty -Path $DefaultSetupRegPath -Name "ConfigStatus" -Value 2001 | Out-Null
+                    if (Configure-JiT) {
+                        Set-ItemProperty -Path $DefaultSetupRegPath -Name "ConfigStatus" -Value 2004 | Out-Null
                         Write-Host 
-                        Write-Host 
-                        Write-Host "Do not forget to configure the delegations!" -ForegroundColor Magenta
+                        Write-Host "JiT configuration successfully finished !" -ForegroundColor Yellow
+                        if ($global:config.EnableDelegation){
+                            Write-Host 
+                            Write-Host 
+                            Write-Host "Do not forget to configure the delegations!" -ForegroundColor Magenta
+                        }
+                    } else {
+                        Write-Host "JiT configuration could not successfully finished - aborting ..." -ForegroundColor Red
+                        $success = $false
                     }
                 } else {
-                    Write-Host "JiT configuration could not successfully finished - aborting ..." -ForegroundColor Red
+                    Write-Host "JiT configuration could not be written to AD - aborting ..." -ForegroundColor Red
                     $success = $false
                 }
             } else {
-                Write-Host "JiT configuration could not be written to AD - aborting ..." -ForegroundColor Red
+                Write-Host "JiT configuration canceled ..." -ForegroundColor Red
                 $success = $false
             }
         } else {
-            Write-Host "JiT configuration canceled ..." -ForegroundColor Red
-            $success = $false
+            if (Configure-JiT -$SkipDomainTasks:(if($SkipDomainActions) {$true} else {$false}) {
+                Set-ItemProperty -Path $DefaultSetupRegPath -Name "ConfigStatus" -Value 2004 | Out-Null
+                Write-Host 
+                Write-Host "JiT configuration successfully finished !" -ForegroundColor Yellow
+                if ($global:config.EnableDelegation){
+                    Write-Host 
+                    Write-Host 
+                    Write-Host "Do not forget to configure the delegations!" -ForegroundColor Magenta
+                }
+            } else {
+                Write-Host "JiT configuration could not successfully finished - aborting ..." -ForegroundColor Red
+                $success = $false
+            }
+
         }
     }
 
     if ($PSCmdlet.ParameterSetName -eq "UpdateConfig") {
+        #exit if requirements are not met
+        if (!$HasDaOrEA) {
+            Write-Host "Current run account is not a member of Domain/Enterprise Admins... " -ForegroundColor Red
+            Write-Host "Ensure proper permissions for run account" -ForegroundColor Red
+            Write-Host "before continuing with JIT" -ForegroundColor Yellow
+            Write-Host "Aborting!" -ForegroundColor Red
+            $exit = $true
+        }
         # check for valid configuration before doing some updates
         try {
-            if ((Get-ItemProperty -Path $DefaultSetupRegPath -Name "ConfigStatus" -ErrorAction Stop).ConfigStatus -eq 2004) { 
+            if (((Get-ItemProperty -Path $DefaultSetupRegPath -Name "ConfigStatus" -ErrorAction Stop).ConfigStatus -eq 2004) -or $ForceUpdate) { 
                 #region re-define all configuration items as configured
                 [bool]$CnfgObjSchemaExtDone = $true
                 [bool]$CnfgObjADStructureDone = $true
@@ -1533,6 +1593,14 @@ process {
     }
 
     if ($PSCmdlet.ParameterSetName -eq "NewConfig") {
+        #exit if requirements are not met
+        if (!($IsAdmin -and $HasDaOrEA)) {
+            Write-Host "Current run account is either not local administrator or not a member of Domain/Enterprise Admins... " -ForegroundColor Red
+            Write-Host "Ensure proper permissions for run account" -ForegroundColor Red
+            Write-Host "before continuing with JIT" -ForegroundColor Yellow
+            Write-Host "Aborting!" -ForegroundColor Red
+            $exit = $true
+        }
 
         if ((ConfigurationMenu) -eq "Success") {
 

@@ -47,6 +47,10 @@ param(
     [string]$JitProgramFolder,
 
     [Parameter(Mandatory = $false,
+        ParameterSetName = "InstallFilesOnly")]
+    [switch]$InstallFilesOnly,
+
+    [Parameter(Mandatory = $false,
         ParameterSetName = "Update")]
     [switch]$UpdateConfiguration,
 
@@ -224,6 +228,7 @@ begin {
         $ExecutionDirectory = (Get-Location).Path
         $ConfigSchemaAttributesFileName = $ExecutionDirectory + "\JitConfigSchema.ads"
         $DelegationSchemaAttributesFileName = $ExecutionDirectory + "\JitDelegationSchema.ads"
+        $SchemaMaster = (Get-ADForest).SchemaMaster
 
         #schema Path
         $AdSchemaPath = (Get-ADRootDSE).schemaNamingContext
@@ -264,10 +269,10 @@ begin {
             $Caption = 'Adding new classes to Active Directory Schema'
 
             if ($PSCmdlet.ShouldProcess($ConfirmationMessage, $Caption)) {
-                if (!(Get-ADObject -Filter 'name -eq $JitDelegationClassSchemaName' -SearchBase $AdSchemaPath)) {
+                if (!(Get-ADObject -Filter 'name -eq $JitDelegationClassSchemaName' -SearchBase $AdSchemaPath -Server $SchemaMaster)) {
                     try {
                         Write-Host "Creating new schema class $($JitDelegationClassSchemaName) ..." -ForegroundColor Yellow
-                        New-ADObject -Name $JitDelegationClassSchemaName -Type 'classSchema' -Path $AdSchemaPath -OtherAttributes $JiTDelegationClassAttributes  
+                        New-ADObject -Name $JitDelegationClassSchemaName -Type 'classSchema' -Path $AdSchemaPath -OtherAttributes $JiTDelegationClassAttributes -Server $SchemaMaster 
                         Write-Host "--> Schema class $($JitDelegationClassSchemaName) created!" -ForegroundColor Green
                     }
                     catch {
@@ -280,7 +285,7 @@ begin {
                     try {
                         Write-Host
                         Write-Host "Setting permissions for new schema class $($JitDelegationClassSchemaName) ..." -ForegroundColor Yellow
-                        Set-Acl -Path "AD:/$('CN='+$JitDelegationClassSchemaName+','+$AdSchemaPath)" -AclObject $DefaultAcl -Passthru:$PassThru
+                        Set-Acl -Path "AD:/$('CN='+$JitDelegationClassSchemaName+','+$AdSchemaPath)" -AclObject $DefaultAcl -Passthru:$PassThru 
                         Write-Host "--> Done!" -ForegroundColor Green
                     }
                     catch {
@@ -318,11 +323,11 @@ begin {
             $Caption = 'Adding new classes to Active Directory Schema'
 
             if ($PSCmdlet.ShouldProcess($ConfirmationMessage, $Caption)) {
-                if (!(Get-ADObject -Filter 'name -eq $JitCnfgClassSchemaName' -SearchBase $AdSchemaPath)) {
+                if (!(Get-ADObject -Filter 'name -eq $JitCnfgClassSchemaName' -SearchBase $AdSchemaPath -Server $SchemaMaster)) {
                     try {
                         Write-Host
                         Write-Host "Creating new schema class $($JitCnfgClassSchemaName) ..." -ForegroundColor Yellow
-                        New-ADObject -Name $JitCnfgClassSchemaName -Type 'classSchema' -Path $AdSchemaPath -OtherAttributes $JiTConfigClassAttributes  
+                        New-ADObject -Name $JitCnfgClassSchemaName -Type 'classSchema' -Path $AdSchemaPath -OtherAttributes $JiTConfigClassAttributes -Server $SchemaMaster 
                         Write-Host "--> Schema class $($JitCnfgClassSchemaName) created!" -ForegroundColor Green
                     }
                     catch {
@@ -392,12 +397,12 @@ begin {
                 }
  
                 $temp = $Attribute.Name
-                if (!(Get-ADObject -Filter 'name -eq $temp' -SearchBase $AdSchemaPath)) {
+                if (!(Get-ADObject -Filter 'name -eq $temp' -SearchBase $AdSchemaPath -Server $SchemaMaster)) {
                     #create new JiT schema attribute in AD
                     try {
                         Write-Host
                         Write-Host "Creating new schema attribute '$($Attribute.Name)' ..." -ForegroundColor Yellow
-                        New-ADObject -Name  $Attribute.Name -Type attributeSchema -Path $AdSchemaPath -OtherAttributes $Attributes
+                        New-ADObject -Name  $Attribute.Name -Type attributeSchema -Path $AdSchemaPath -OtherAttributes $Attributes -Server $SchemaMaster
                         Write-Host "--> Schema attribute '$($Attribute.Name)' created!" -ForegroundColor Green
                      }
                     catch {
@@ -413,14 +418,14 @@ begin {
 
                 #add attribute to proper JiT class
                 if ($AddDelegationSchema) {
-                    $JitSchemaClass = get-adobject -SearchBase $AdSchemaPath -Filter 'name -eq $JitDelegationClassSchemaName'
+                    $JitSchemaClass = get-adobject -SearchBase $AdSchemaPath -Filter 'name -eq $JitDelegationClassSchemaName' -Server $SchemaMaster
                 } else {
-                    $JitSchemaClass = get-adobject -SearchBase $AdSchemaPath -Filter 'name -eq $JitCnfgClassSchemaName'
+                    $JitSchemaClass = get-adobject -SearchBase $AdSchemaPath -Filter 'name -eq $JitCnfgClassSchemaName' -Server $SchemaMaster
                 }
                 try {
                     Write-Host
                     Write-Host "Adding attribute '$($Attribute.Name)' to class '$($JitSchemaClass.Name)'..." -ForegroundColor Yellow
-                    $JitSchemaClass | Set-ADObject -Add @{mayContain = $Attribute.Name}
+                    $JitSchemaClass | Set-ADObject -Add @{mayContain = $Attribute.Name} -Server $SchemaMaster
                     Write-Host "--> Done!" -ForegroundColor Green
                  }
                 catch {
@@ -433,14 +438,14 @@ begin {
             }
             #setting possible superiors
             if ($AddDelegationSchema) {
-                $JitSchemaClass = get-adobject -SearchBase $AdSchemaPath -Filter 'name -eq $JitDelegationClassSchemaName'
+                $JitSchemaClass = get-adobject -SearchBase $AdSchemaPath -Filter 'name -eq $JitDelegationClassSchemaName' -Server $SchemaMaster
             } else {
-                $JitSchemaClass = get-adobject -SearchBase $AdSchemaPath -Filter 'name -eq $JitCnfgClassSchemaName'
+                $JitSchemaClass = get-adobject -SearchBase $AdSchemaPath -Filter 'name -eq $JitCnfgClassSchemaName' -Server $SchemaMaster
             }
             try {
                 Write-Host
                 Write-Host "Adding possible superiors for class '$($JitSchemaClass.Name)'..." -ForegroundColor Yellow
-                $JitSchemaClass | Set-ADObject -Add @{possSuperiors = 'container'}
+                $JitSchemaClass | Set-ADObject -Add @{possSuperiors = 'container'} -Server $SchemaMaster
                 Write-Host "--> Done!" -ForegroundColor Green
             }
             catch {
@@ -1017,6 +1022,63 @@ process {
         }
     }
 
+    if ((!$exit) -and ($PSCmdlet.ParameterSetName -eq "InstallFilesOnly")) {
+
+        #continue welcome mask
+        Write-Host "--> Installing JiT files ..." -ForegroundColor Yellow
+        Write-Host "###################################################################" -ForegroundColor Yellow
+        Write-Host
+
+        #checking for JiT schema in AD
+        try {
+            Get-ADObject -Identity "CN=$($JitDelegationClassName),$((Get-ADRootDSE).schemaNamingContext)"
+            $CnfgObjSchemaExtDone = $true
+        } catch {
+            #JiT schema missing
+            Write-Host 
+            Write-Host "AD schema not updated for Just-in-Time administration!" -ForegroundColor Yellow
+            Write-Host "Installation cannot proceed!" -ForegroundColor Red
+            Write-Host "Either run full installation or run:" -ForegroundColor Red
+            Write-Host "install-JiT.ps1 -ExtendSchema" -ForegroundColor Magenta
+            $exit = $true
+        }
+        #checking for JiT AD structure
+        if (!$exit) {
+            try {
+                Get-ADObject -Identity $DefaultJiTADCnfgObjectDN|Out-Null
+            }
+            catch {
+                #JiT AD structure missing
+                Write-Host "JiT structure in Active Directory missing ..." -ForegroundColor Yellow
+                Write-Host "Installation cannot proceed!" -ForegroundColor Red
+                Write-Host "Either run full installation or run:" -ForegroundColor Red
+                Write-Host "install-JiT.ps1 -createAdStructure" -ForegroundColor Magenta
+                $exit = $true
+            }
+        }
+
+        if (!$exit) {
+            #checking if running user is Domain admin or Enterprise admin
+            #check for elevation
+            if ($IsAdmin) {
+                #installing files 1st
+                if (!(Install-JiTFiles)) {
+                    Write-Host 
+                    Write-Host 
+                    Write-Host "Just-in-Time installation failed!" -ForegroundColor Red
+                    $exit = $true
+                }
+                    
+                if (!$exit) {
+                    Set-ItemProperty -Path $DefaultSetupRegPath -Name "SetupStatus" -Value 1001 | Out-Null
+                }
+            } else {
+                Write-Host "Current run session is not elevated - aborting!" -ForegroundColor Red
+                $exit = $true
+            }
+        }
+    }
+    
     if ((!$exit) -and ($PSCmdlet.ParameterSetName -eq "Uninstall")) {
         #continue welcome mask
         Write-Host "--> Removing 'Just-In-Time' from this computer" -ForegroundColor Yellow
