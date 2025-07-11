@@ -136,8 +136,12 @@ param (
     [string]$CnfgObjName,
 
     [Parameter (Mandatory=$false,
-        ParameterSetName = "FullConfig")]
-    [switch]$SkipDomainTasks,
+        ParameterSetName = "RunLocalInstallationOnly")]
+    [switch]$RunLocalInstallationOnly,
+
+    [Parameter (Mandatory=$false,
+        ParameterSetName = "RunDomainInstallationOnly")]
+    [switch]$RunDomainInstallationOnly,
 
     [Parameter (Mandatory=$false,
         ParameterSetName = "NewConfig")]
@@ -146,10 +150,6 @@ param (
     [Parameter (Mandatory=$false,
         ParameterSetName = "UpdateConfig")]
     [switch]$UpdateConfig,
-
-    [Parameter (Mandatory=$false,
-        ParameterSetName = "UpdateConfig")]
-    [switch]$ForceUpdate,
 
     [Parameter (Mandatory=$false,
         ParameterSetName = "AddServer")]
@@ -161,7 +161,7 @@ begin {
     $exit = $false
     $success = $true
 
-    [string]$_scriptVersion = "20250130" #the current script version
+    [string]$_scriptVersion = "20250710" #the current script version
 
 
     #region check if ActiveDirectory Powershell module is available
@@ -181,12 +181,14 @@ begin {
     }
     #endregion
 
-    #current domain DNSName. Testing the Powershell AD modules are working
+    #closest DC in domain 
+    #testing the Powershell AD modules are working and we have domain connectivity
     try {
-        $ADDomainDNS = (Get-ADDomain).DNSRoot 
+        $DefaultDomainController = (Get-ADDomainController -Discover -ForceDiscover -Writable -NextClosestSite).HostName[0]
+        #$ADDomainDNS = (Get-ADDomain -Server ((Get-ADDomainController -Discover -ForceDiscover -Writable).HostName[0])).DNSRoot 
     }
     catch {
-        Write-Host "Cannot determine AD domain... " -ForegroundColor Red
+        Write-Host "Cannot determine closest Domain Controller... " -ForegroundColor Red
         Write-Host "Ensure AD Powershell modules are available and local system has access to Active Directory" -ForegroundColor Red
         Write-Host "before continuing with JIT" -ForegroundColor Yellow
         Write-Host "Aborting!" -ForegroundColor Red
@@ -195,7 +197,7 @@ begin {
     }
 
     #region validate DFL & FFL
-    if ((Get-ADforest).forestmode -lt "Windows2016forest") {
+    if ((Get-ADforest -Server $DefaultDomainController).forestmode -lt "Windows2016forest") {
         Write-Host "Active Directory forest functional level is lower than 'Windows2016forest'" -ForegroundColor Yellow
         Write-Host 
         Write-Host "Raise forest and domain functional level to 'Windows 2016'" -ForegroundColor Magenta
@@ -205,7 +207,7 @@ begin {
         Exit 0x1
     }
 
-    if ((Get-ADDomain).domainmode -lt "Windows2016Domain") {
+    if ((Get-ADDomain -Server $DefaultDomainController).domainmode -lt "Windows2016Domain") {
         Write-Host "Active Directory domain functional level is lower than 'Windows2016Domain'" -ForegroundColor Yellow
         Write-Host 
         Write-Host "Raise domain functional level to 'Windows 2016'" -ForegroundColor Magenta
@@ -230,13 +232,13 @@ begin {
 
     #region prepare variables
     if (!(Get-Variable DefaultJiTADCnfgObjectDN -Scope Global -ErrorAction SilentlyContinue)) {
-        Set-Variable -name DefaultJiTADCnfgObjectDN -value ("CN=Jit-Configuration,CN=Just-In-Time Administration,CN=Services,"+(Get-ADRootDSE).configurationNamingContext) -Scope Global -Option ReadOnly
+        Set-Variable -name DefaultJiTADCnfgObjectDN -value ("CN=Jit-Configuration,CN=Just-In-Time Administration,CN=Services,"+(Get-ADRootDSE -Server $DefaultDomainController).configurationNamingContext) -Scope Global -Option ReadOnly
     }
     if (!(Get-Variable JitCnfgObjClassName -Scope Global -ErrorAction SilentlyContinue)) {
         Set-Variable -name JitCnfgObjClassName -value "JiT-ConfigurationObject" -Scope Global -Option ReadOnly
     }
     if (!(Get-Variable JiTAdSearchbase -Scope Global -ErrorAction SilentlyContinue)) {
-        Set-Variable -name JiTAdSearchbase -value ("CN=Delegations,CN=Just-In-Time Administration,CN=Services,"+(Get-ADRootDSE).configurationNamingContext) -Scope Global -Option ReadOnly
+        Set-Variable -name JiTAdSearchbase -value ("CN=Delegations,CN=Just-In-Time Administration,CN=Services,"+(Get-ADRootDSE -Server $DefaultDomainController).configurationNamingContext) -Scope Global -Option ReadOnly
     }
     if (!(Get-Variable JitDelegationObjClassName -Scope Global -ErrorAction SilentlyContinue)) {
         Set-Variable -name JitDelegationObjClassName -value "jiT-DelegationObject" -Scope Global -Option ReadOnly
@@ -841,6 +843,10 @@ begin {
     #might need EA/DA depending on central store --> sysvol
     function Move-CentralTaskScripts
     {
+        param (
+            [switch]$ForceOverwrite
+        )
+
         #assuming all goes well
         $ret = $true
 
@@ -854,35 +860,46 @@ begin {
             #move task files
             Write-Host 
             Write-Host "Moving central task scripts to $($targetDir)" -ForegroundColor Yellow
-            try {
-                $JitFiles2Move | ForEach-Object {
-                    Write-Host "---> File: $($_)" -ForegroundColor Yellow
-                    #get full file path
-                    $FileName = Get-Item $_ -ErrorAction SilentlyContinue
-                    if ($FileName) {
-                        Move-Item $FileName.FullName $TargetDir -ErrorAction Stop -Force -Verbose
+            $JitFiles2Move | ForEach-Object {
+                Write-Host "---> File: $($_)" -ForegroundColor Yellow
+                #get full file path
+                $FileName = Get-Item $_ -ErrorAction SilentlyContinue
+                if ($FileName) {
+                    #check if files already placed a central folder before trying to move
+                    if (!(Test-Path ("$($targetDir)\$($_)"))) {
+                        try {
+                            if ($ForceOverwrite) {
+                                Move-Item $FileName.FullName $TargetDir -ErrorAction Stop -Force -Verbose
+                            } else {
+                                Move-Item $FileName.FullName $TargetDir -ErrorAction Stop -Verbose
+                            }
+                        }
+                        catch [System.UnauthorizedAccessException] {
+                            Write-Host "A access denied error occured" -ForegroundColor Red
+                            Write-Host "check permission at $($TargetDir)" -ForegroundColor Magenta
+                            $ret = $false
+                        }
+                        catch{
+                            Write-Host "A unexpected error is occured" -ForegroundColor Red
+                            Write-Host "File: $($_) could not be copied - skipping..." -ForegroundColor Red
+                            Write-Host $Error[0] 
+                            $ret = $false
+                        }
                     } else {
-                        Write-Host "File: $($_) does not exists - skipping..." -ForegroundColor Red
+                        Write-Host "File: $($targetDir)\$($_) does already exists - skipping..." -ForegroundColor Green
                     }
-                    Write-Host
+                } else {
+                    Write-Host "File: $($_) does not exists - skipping..." -ForegroundColor Red
+                    $ret = $false
                 }
-            }
-            catch [System.UnauthorizedAccessException] {
-                Write-Host "A access denied error occured" -ForegroundColor Red
-                Write-Host "check permission at $($TargetDir)" -ForegroundColor Magenta
-                $ret = $false
-            }
-            catch{
-                Write-Host "A unexpected error is occured" -ForegroundColor Red
-                $Error[0] 
-                $ret = $false
+                Write-Host
             }
         }
         return $ret
     }
 
     #needs DA/EA
-    function Configure-JiT
+    function Configure-DomainJiTTasks
     {
         param (
             [Parameter(Mandatory = $false)]
@@ -890,92 +907,133 @@ begin {
         ) 
 
         $success = $true
-        #JiT gMSA task account
-        $success = (create-gMSA -Name $global:config.GroupManagedServiceAccountName -Domain $global:config.Domain)
-        if(!$success -and !$SkipDomainActions) {
-            Write-Host "Creating gMSA $($global:config.GroupManagedServiceAccountName) failed!" -ForegroundColor Red
+        $forceExit = $false
+
+        #we need an initial JiT admin server computer account for ancoring the gMSA
+        #if script does not run directly on JiT admin server
+        if ($PSCmdlet.ParameterSetName -eq "RunDomainInstallationOnly") {
+            do {
+                $result = Set-JitCnfgValue -Value $((Get-ADComputer -Identity $env:COMPUTERNAME).DistinguishedName) -Msg "Define initial JiT admin server" -ValueMustDN        }
+                if ($result.toLower() -ne "x") {
+                    if (IsDNFormat -DNString $result) {
+                        try {
+                            $DefaultJiTServer = (get-ADComputer -Identity $result).DistinguishedName
+                        }
+                        catch {
+                            Write-Host "Computer:`r`n --> $($result)`r`ncannot be identified!" -ForgroundColor Red
+                            Write-Host "Verify that provided DN is correct!" -ForgroundColor Magenta
+                            Write-Host $Error[0] 
+                        }
+                    } else {
+                        Write-Host "Invalid DN provided for default JiT admin server..." -ForgroundColor Red
+                    }
+                } else {
+                    $success = $false
+                    $forceExit = $true
+                }
+            } until (($DefaultJiTServer) -or $forceExit)
         } else {
+            $DefaultJiTServer = (Get-ADComputer -Identity $env:COMPUTERNAME).DistinguishedName
+        }
+
+        if (!$forceExit) {
+            #JiT gMSA task account
+            $success = (create-gMSA -Name $global:config.GroupManagedServiceAccountName -Domain $global:config.Domain -TargetComputerName $DefaultJiTServer)
+            if(!$success) {
+                Write-Host "Creating gMSA $($global:config.GroupManagedServiceAccountName) failed!" -ForegroundColor Red
+            } else {
+                #grant gMSA permissions on Tier 1 JiT Mgmt group OU
+                $success = Configure-JiTGroupOU -DefaultOUName $global:config.OU -objgMSA $objGmsa
+                if (!$success){
+                    Write-Host "Could not create T1 JiT OU for admin groups: $($global:config.OU)!" -ForegroundColor Red
+                    Write-Host "Aborting!" -ForegroundColor Red
+                    $forceExit = $true
+                }
+            }
+            if (!$forceExit) {
+                $success = $success -or (Move-CentralTaskScripts)
+            }
+        }
+        return $success, $forceExit
+    }
+
+    function Configure-LocalJiTTasks
+    {
+
+        $success = $true
+        $forceExit = $false
+
+        #JiT gMSA task account
+        $success = (Install-gMSA -Name $global:config.GroupManagedServiceAccountName -Domain $global:config.Domain)
+        if($success) {
             $objGmsa = Get-ADServiceAccount -Identity $global:config.GroupManagedServiceAccountName -Server ([string]$global:config.Domain)
             $success = Add-LogonAsABatchJobPrivilege -Sid $objGmsa.sid
             if (!$success) {
                 Write-Host "Granting gMSA $($global:config.GroupManagedServiceAccountName) LogonAsBatchJob privileges failed!" -ForegroundColor Red
-            } else {
-                if (!$SkipDomainActions) {
-                    #grant gMSA permissions on Tier 1 JiT Mgmt group OU
-                    $success = Configure-JiTGroupOU -DefaultOUName $global:config.OU -objgMSA $objGmsa -$SkipOUCreation:$SkipDomainTasks
-                    if (!$success){
-                        Write-Host "Could not create T1 JiT OU for admin groups: $($global:config.OU)!" -ForegroundColor Red
-                    }
-                } else {
-                        Write-Host "Could not create T1 JiT OU for admin groups: $($global:config.OU)!" -ForegroundColor Red
-                }
+                Write-Host "Please manually grant gMSA $($global:config.GroupManagedServiceAccountName) LogonAsBatchJob privileges... " -ForegroundColor Magenta
+                Write-Host "continuing... " -ForegroundColor Yellow
             }
         }
 
+        #move task script to central folder
+        $success = $success -or (Move-CentralTaskScripts)
+
         #Jit event log
-        if (!(create-Eventlog)) {
-            Write-Host "Creating eventlog or event source failed!" -ForegroundColor Red
-            $success = $false
-        }
+        $success = $success -or (create-Eventlog)
 
         #Jit scheduled tasks
         if (!(create-ScheduledTasks)) {
             Write-Host "Tier 1 scheduled tasks could not be created!" -ForegroundColor Red
             $success = $false
-        }
-
-        if (!(Move-CentralTaskScripts)) {
-            Write-Host "Task scripts could not be moved to central location!" -ForegroundColor Red
-            $success = $false
+            $forceExit = $true
         }
 
         if ($success) {
             Write-EventLog -LogName $global:config.EventLog -Source $global:config.EventSource -EventId 1 -Message "JiT configuration completed"
         } else {
-            Write-EventLog -LogName $global:config.EventLog -Source $global:config.EventSource -EventId 1 -Message "JiT configuration completed with errors - review the configuration and correct any issue before using JiT"
+            Write-EventLog -LogName Application -Source 'Application Error' -EntryType Error -EventId 666 -Category 666 -Message "JiT configuration completed with errors - review the configuration and correct any issue before using JiT"
         }
-        return $success
+        return $success, $forceExit
     }
 
     #needs local admin
     function create-Eventlog
     {
+        #assuming all goes well
+        $ret = $true
+
         #region create eventlog and register EventSource id required
         Write-Host "Reading Windows eventlogs please wait" -ForegroundColor Yellow
         if (!([System.Diagnostics.EventLog]::SourceExists($global:config.EventSource))) {
             Write-Host "Creating new Event log $($global:config.EventLog)"
-            New-EventLog -LogName $global:config.EventLog -Source $global:config.EventSource
+            try {
+                New-EventLog -LogName $global:config.EventLog -Source $global:config.EventSource
+            }
+            catch {
+                Write-Host "A unexpected error is occured" -ForegroundColor Red
+                Write-Host "Eventlog could not be created - skipping..." -ForegroundColor Red
+                $Error[0] 
+                $ret = $false
+            }
         } else {
             Write-Host "Eventlog '$($global:config.EventLog)' already exists, Checking for event source..." -ForegroundColor Yellow
             if (!([System.Diagnostics.EventLog]::SourceExists($global:config.EventSource))) {
                 Write-Host "Creating new Event log $($global:config.EventSource)"
-                New-EventLog -LogName $global:config.EventLog -Source $global:config.EventSource
+                try {
+                    New-EventLog -LogName $global:config.EventLog -Source $global:config.EventSource
+                }
+                catch {
+                    Write-Host "A unexpected error is occured" -ForegroundColor Red
+                    Write-Host "Event source could not be created - skipping..." -ForegroundColor Red
+                    $Error[0] 
+                    $ret = $false
+                }
             } else {
                 Write-Host "Event source '$($global:config.EventSource)' already exists," -ForegroundColor Yellow
             }
         }
         #endregion
-        return $true
-    }
-
-    function Read-gMSA
-    {
-        param (
-            [Parameter(Mandatory=$True)] [string]$DefaultName
-        )
-
-        do{
-            $gmsaName = Read-Host -Prompt "Group managed service account name [$($DefaultName)]"
-            if ($gmsaName -eq ""){ 
-                $gmsaName = $DefaultName
-            }
-            #validation GMSA name
-            if (($gmsaName -lt 5) -or ($gmsaName.Length -gt 14) ){
-                Write-Host "Invalid length of the GMSA name. The name must between 5 and 14 characters" -ForegroundColor Yellow
-                $gmsaName = ""
-            }
-        } while ($gmsaName -eq "")
-        return $gmsaName
+        return $ret
     }
 
     #needs DA/EA
@@ -983,10 +1041,14 @@ begin {
     {
         param (
             [Parameter(Mandatory=$True)] [string]$Name,
-            [Parameter(Mandatory=$True)] [string]$Domain
+            [Parameter(Mandatory=$True)] [string]$Domain,
+            [Parameter(Mandatory=$false)] [string]$TargetComputerName #must be full DN
         )
 
         $ret = $true
+        if (!$TargetComputerName) {
+            $TargetComputerName = (Get-ADComputer -Identity $env:COMPUTERNAME).DistinguishedName
+        } 
         try {
             #create the group managed service account if not already exists. 
             if ($null -eq (Get-ADServiceAccount -Filter "Name -eq '$($Name)'" -Server $($Domain))){
@@ -996,9 +1058,9 @@ begin {
                 Write-Host "gMSA $($Name) already exists..." -ForegroundColor Yellow
             }
             $principalsAllowToRetrivePassword = (Get-ADServiceAccount -Identity $Name -Properties PrincipalsAllowedToRetrieveManagedPassword).PrincipalsAllowedToRetrieveManagedPassword
-            if (($principalsAllowToRetrivePassword.Count -eq 0) -or ($principalsAllowToRetrivePassword.Value -notcontains (Get-ADComputer -Identity $env:COMPUTERNAME).DistinguishedName)){
+            if (($principalsAllowToRetrivePassword.Count -eq 0) -or ($principalsAllowToRetrivePassword.Value -notcontains $TargetComputerName){
                 Write-Host "Adding current computer to the list of computer who will retrive the password" -ForegroundColor Yellow
-                $principalsAllowToretrivePassword.Add((Get-ADComputer -Identity $env:COMPUTERNAME).DistinguishedName)
+                $principalsAllowToretrivePassword.Add($TargetComputerName)
                 Set-ADServiceAccount -Identity $Name -PrincipalsAllowedToRetrieveManagedPassword $principalsAllowToRetrivePassword -Server $Domain
             }
         } catch {
@@ -1010,23 +1072,43 @@ begin {
             Write-Host "Validate the gMSA exists and the computer has the privilege to retrieve the gMSA password" -ForegroundColor Red
             $ret = $false
         }
-        
-        if ($ret) {
+        return $ret
+    }
+
+    function Install-gMSA
+    {
+        param (
+            [Parameter(Mandatory=$True)] [string]$Name,
+            [Parameter(Mandatory=$True)] [string]$Domain
+        )
+
+        $ret = $true
+        #verify the group managed service account already exists
+        Write-Host "Verifying that gMSA $($Name) already exists..." -ForegroundColor Yellow
+        if ($null -eq (Get-ADServiceAccount -Filter "Name -eq '$($Name)'" -Server $($Domain))){
+            Write-Host " gMSA $($Name) does not exist..." -ForegroundColor Red
+            Write-Host " Ensure gMSA $($Name) has been created before continuing ..." -ForegroundColor Magenta
+            Write-Host " Aborting!" -ForegroundColor Red
+            $ret = $false
+        } else {
+            Write-Host "gMSA $($Name) already exists..." -ForegroundColor Green
             #install the group managed service account locally 
-            $oGmsa = Get-ADServiceAccount -Identity $Name -Server $Domain
             if (!(Test-ADServiceAccount -Identity $Name )){
-                #Test gMSA ...
                 try {
+                    $oGmsa = Get-ADServiceAccount -Identity $Name -Server $Domain
                     Install-ADServiceAccount -Identity $oGmsa
                 } catch {
-                    Write-Host "Installation of the Group managed service account ($($Name)) failed." -ForegroundColor Red
+                    Write-Host "Installation of the Group managed service account $($Name) failed." -ForegroundColor Red
+                    Write-Host "Ensure current computer has been added to the list of computer who will retrive the password" -ForegroundColor Magenta
+                    Write-Host " Aborting!" -ForegroundColor Red
                     $ret = $false
                 }
             }
         }
+       
         if ($ret) {
             if (!(Test-ADServiceAccount -Identity $Name)){
-                Write-Host "validation of the Group managed service account ($($Name)) failed." -ForegroundColor Red
+                Write-Host "validation of the Group managed service account $($Name) failed." -ForegroundColor Red
                 $ret = $false
             }
         }
@@ -1332,13 +1414,6 @@ begin {
                 $Rule2InheritedObjectType = '00000000-0000-0000-0000-000000000000'  
                 $Rule2ACE = New-Object System.DirectoryServices.ActiveDirectoryAccessRule $identity,$Rule2AdRights,$Type,$Rule2ObjectType,$Rule2InheritanceType,$Rule2InheritedObjectType
 
-                # Full control to any group object in this OU and createChild, deleteChild for group object in this OU
-                #$adRights = [System.DirectoryServices.ActiveDirectoryRights] "GenericAll"
-                #$type = [System.Security.AccessControl.AccessControlType] "Allow"
-                #$inheritanceType = [System.DirectoryServices.ActiveDirectorySecurityInheritance] "All"
-                #$ACE = New-Object System.DirectoryServices.ActiveDirectoryAccessRule $identity,$adRights,$type,$inheritanceType
-                #$aclGroupOU.AddAccessRule($ace)
-                
                 $aclGroupOU.AddAccessRule($Rule1ACE)
                 $aclGroupOU.AddAccessRule($Rule2ACE)
                 Set-Acl -AclObject $aclGroupOU "AD:\$($DefaultOUName)"
@@ -1450,7 +1525,7 @@ process {
 
     if ($PSCmdlet.ParameterSetName -eq "FullConfig") {
         #exit if requirements are not met
-        if (!($IsAdmin -and ($HasDaOrEA -or $SkipDomainTasks))) {
+        if (!($IsAdmin -and $HasDaOrEA)) {
             Write-Host "Current run account is either not local administrator or not a member of Domain/Enterprise Admins... " -ForegroundColor Red
             Write-Host "Ensure proper permissions for run account" -ForegroundColor Red
             Write-Host "before continuing with JIT" -ForegroundColor Yellow
@@ -1480,7 +1555,7 @@ process {
             Exit 0x5
         }
 
-        if (!$SkipDomainTasks) {
+        if (!$LocalInstallOnly) {
             if ((ConfigurationMenu) -eq "Success") {
 
                 #writing configuration
@@ -1508,7 +1583,7 @@ process {
                 $success = $false
             }
         } else {
-            if (Configure-JiT -$SkipDomainTasks:(if($SkipDomainActions) {$true} else {$false}) {
+            if (Configure-JiT -$LocalInstallOnly:(if($SkipDomainActions) {$true} else {$false}) {
                 Set-ItemProperty -Path $DefaultSetupRegPath -Name "ConfigStatus" -Value 2004 | Out-Null
                 Write-Host 
                 Write-Host "JiT configuration successfully finished !" -ForegroundColor Yellow
@@ -1524,6 +1599,98 @@ process {
 
         }
     }
+    
+    if ($PSCmdlet.ParameterSetName -eq "RunDomainInstallationOnly") {
+        #exit if requirements are not met
+        if (!($IsAdmin -and $HasDaOrEA)) {
+            Write-Host "Current run account is either not local administrator or not a member of Domain/Enterprise Admins... " -ForegroundColor Red
+            Write-Host "Ensure proper permissions for run account" -ForegroundColor Red
+            Write-Host "before continuing with JIT" -ForegroundColor Yellow
+            Write-Host "Aborting!" -ForegroundColor Red
+            $exit = $true
+        }
+
+        if (!$exit) {
+            if ((ConfigurationMenu) -eq "Success") {
+
+                #writing configuration
+                if (Write-JitConfig2AD) { #continue
+                    $result = Configure-DomainJiTTasks
+                    if (!($result[1]) { #forceExit -eq $true
+                        Write-Host 
+                        Write-Host "JiT domain configuration successfully finished !" -ForegroundColor Yellow
+                        if ($global:config.EnableDelegation){
+                            Write-Host 
+                            Write-Host 
+                            Write-Host "Do not forget to run JiT local configure!" -ForegroundColor Magenta
+                            Write-Host 
+                            Write-Host "Do not forget to configure the delegations!" -ForegroundColor Magenta
+                        }
+                    } else {
+                        Write-Host "JiT domain configuration could not successfully finished - aborting ..." -ForegroundColor Red
+                        $success = $false
+                    }
+                } else {
+                    Write-Host "JiT configuration could not be written to AD - aborting ..." -ForegroundColor Red
+                    $success = $false
+                }
+            } else {
+                Write-Host "JiT configuration canceled ..." -ForegroundColor Red
+                $success = $false
+            }
+        }
+    }
+    
+    if ($PSCmdlet.ParameterSetName -eq "RunLocalInstallationOnly") {
+        #exit if requirements are not met
+        if (!$IsAdmin) {
+            Write-Host "Current run account is not local administrator ... " -ForegroundColor Red
+            Write-Host "Ensure proper permissions for run account" -ForegroundColor Red
+            Write-Host "before continuing with JIT" -ForegroundColor Yellow
+            Write-Host "Aborting!" -ForegroundColor Red
+            $exit = $true
+        }
+
+        if (!$exit) {
+            #Checking the access to the installation directory and provide the system environment variable
+            #Validate the installation directory and stop execution if installation directory doesn't exists
+            if (!($InstallationDirectory)){
+                $InstallationDirectory = (Get-Location).Path
+                Write-Host "Installation folder is $installationDirectory"
+            } elseif (!(Test-Path $InstallationDirectory)) {
+                Write-Output "Cannot access installation folder ..."
+                Write-Output "ensure the folder exists and running user has access - aborting!"
+                $success = $false
+                Exit 0x5
+            }
+            #setting initial reg value
+            try{
+                New-ItemProperty -Path $DefaultSetupRegPath -Name "ConfigStatus" -PropertyType dword -Value 2000 | Out-Null
+            } catch {
+                Write-Host "Could not create 'Just-in-Time' registry!" -ForegroundColor Red
+                Write-Host $_.Exception.Message -ForegroundColor Red
+                Write-Host
+                Write-Host "'Just-in-Time' configuration failed!" -ForegroundColor Red
+                $success = $false
+                Exit 0x5
+            }
+
+            $result = Configure-LocalJiTTasks
+            if (!$result[1]) { #$forceExit -eq $true
+                Set-ItemProperty -Path $DefaultSetupRegPath -Name "ConfigStatus" -Value 2004 | Out-Null
+                Write-Host 
+                Write-Host "Local JiT configuration successfully finished !" -ForegroundColor Yellow
+                if ($global:config.EnableDelegation){
+                    Write-Host 
+                    Write-Host 
+                    Write-Host "Do not forget to configure the delegations!" -ForegroundColor Magenta
+                }
+            } else {
+                Write-Host "Local JiT configuration could not successfully finished - aborting ..." -ForegroundColor Red
+                $success = $false
+            }
+        }
+    }
 
     if ($PSCmdlet.ParameterSetName -eq "UpdateConfig") {
         #exit if requirements are not met
@@ -1534,61 +1701,64 @@ process {
             Write-Host "Aborting!" -ForegroundColor Red
             $exit = $true
         }
-        # check for valid configuration before doing some updates
-        try {
-            if (((Get-ItemProperty -Path $DefaultSetupRegPath -Name "ConfigStatus" -ErrorAction Stop).ConfigStatus -eq 2004) -or $ForceUpdate) { 
-                #region re-define all configuration items as configured
-                [bool]$CnfgObjSchemaExtDone = $true
-                [bool]$CnfgObjADStructureDone = $true
-                [bool]$CnfgObjJitAdmGroupOUDone = $true
-                [bool]$CnfgObjAdminPreFixDone = $true
-                [bool]$CnfgObjDomainDone = $true
-                [bool]$CnfgObjTier0ServerGroupNameDone = $true
-                [bool]$CnfgObjLDAPT1ComputersDone = $true
-                [bool]$CnfgObjT1SearchbaseDone = $true
-                [bool]$CnfgObjMaxElevatedTimeDone = $true
-                [bool]$CnfgObjDefaultElevatedTimeDone = $true
-                [bool]$CnfgObjMaxConcurrentServerDone = $true
-                [bool]$CnfgObjGroupManagedServiceAccountNameDone = $true
-                [bool]$CnfgObjTaskRunIntervalDone = $true
-                [bool]$CnfgObjTaskScriptSourceDone = $true
-                [bool]$CnfgObjEventLogDone = $true
-                [bool]$CnfgObjEventSourceDone = $true
-                [bool]$CnfgObjElevateEventIDDone = $true
-                [bool]$CnfgObjRequestOnBehalfOfDone = $true
-                [bool]$CnfgObjEnableMultiDomainSupportDone = $true
-                [bool]$CnfgObjEnableDelegation = $true
-                [bool]$CnfgObjDoneDomainSeparatorDone = $true
-                #[bool]$CnfgObjUseManagedByforDelegationDone = $false
-                #[bool]$CnfgObjDelegationConfigPathDone = $false
-                [bool]$JiTCnfgDone = $false
-                #endregion
 
-                #open config menue to change some settings
-                if ((ConfigurationMenu -UpdateOnly) -eq "Success") {
+        if ($exit) {
+            # check for valid configuration before doing some updates
+            try {
+                if (((Get-ItemProperty -Path $DefaultSetupRegPath -Name "ConfigStatus" -ErrorAction Stop).ConfigStatus -eq 2004) -or $ForceUpdate) { 
+                    #region re-define all configuration items as configured
+                    [bool]$CnfgObjSchemaExtDone = $true
+                    [bool]$CnfgObjADStructureDone = $true
+                    [bool]$CnfgObjJitAdmGroupOUDone = $true
+                    [bool]$CnfgObjAdminPreFixDone = $true
+                    [bool]$CnfgObjDomainDone = $true
+                    [bool]$CnfgObjTier0ServerGroupNameDone = $true
+                    [bool]$CnfgObjLDAPT1ComputersDone = $true
+                    [bool]$CnfgObjT1SearchbaseDone = $true
+                    [bool]$CnfgObjMaxElevatedTimeDone = $true
+                    [bool]$CnfgObjDefaultElevatedTimeDone = $true
+                    [bool]$CnfgObjMaxConcurrentServerDone = $true
+                    [bool]$CnfgObjGroupManagedServiceAccountNameDone = $true
+                    [bool]$CnfgObjTaskRunIntervalDone = $true
+                    [bool]$CnfgObjTaskScriptSourceDone = $true
+                    [bool]$CnfgObjEventLogDone = $true
+                    [bool]$CnfgObjEventSourceDone = $true
+                    [bool]$CnfgObjElevateEventIDDone = $true
+                    [bool]$CnfgObjRequestOnBehalfOfDone = $true
+                    [bool]$CnfgObjEnableMultiDomainSupportDone = $true
+                    [bool]$CnfgObjEnableDelegation = $true
+                    [bool]$CnfgObjDoneDomainSeparatorDone = $true
+                    #[bool]$CnfgObjUseManagedByforDelegationDone = $false
+                    #[bool]$CnfgObjDelegationConfigPathDone = $false
+                    [bool]$JiTCnfgDone = $false
+                    #endregion
 
-                    #writing configuration
-                    if (Write-JitConfig2AD) {
-                        Write-Host 
-                        Write-Host "JiT configuration successfully updated !" -ForegroundColor Yellow
+                    #open config menue to change some settings
+                    if ((ConfigurationMenu -UpdateOnly) -eq "Success") {
+
+                        #writing configuration
+                        if (Write-JitConfig2AD) {
+                            Write-Host 
+                            Write-Host "JiT configuration successfully updated !" -ForegroundColor Yellow
+                        } else {
+                            Write-Host "JiT configuration could not be written to AD - aborting ..." -ForegroundColor Red
+                            $success = $false
+                        }
                     } else {
-                        Write-Host "JiT configuration could not be written to AD - aborting ..." -ForegroundColor Red
+                        Write-Host "JiT configuration canceled ..." -ForegroundColor Red
                         $success = $false
                     }
                 } else {
-                    Write-Host "JiT configuration canceled ..." -ForegroundColor Red
+                    Write-Host "No valid JiT configuration found ..." -ForegroundColor Red
+                    Write-Host "JiT re-configuration canceled!" -ForegroundColor Red
                     $success = $false
                 }
-            } else {
+            }
+            catch {
                 Write-Host "No valid JiT configuration found ..." -ForegroundColor Red
                 Write-Host "JiT re-configuration canceled!" -ForegroundColor Red
                 $success = $false
             }
-        }
-        catch {
-            Write-Host "No valid JiT configuration found ..." -ForegroundColor Red
-            Write-Host "JiT re-configuration canceled!" -ForegroundColor Red
-            $success = $false
         }
     }
 
@@ -1602,20 +1772,22 @@ process {
             $exit = $true
         }
 
-        if ((ConfigurationMenu) -eq "Success") {
+        if (!$exit) {
+            if ((ConfigurationMenu) -eq "Success") {
 
-            #writing configuration
-            if (Write-JitConfig2AD -JiTCnfgName $NewCnfgObjName) {
-                Write-Host 
-                Write-Host "New JiT configuration successfully written to AD !" -ForegroundColor Yellow
-                Write-Host "This function is NOT fully implemented yet !!!" -ForegroundColor Yellow
+                #writing configuration
+                if (Write-JitConfig2AD -JiTCnfgName $NewCnfgObjName) {
+                    Write-Host 
+                    Write-Host "New JiT configuration successfully written to AD !" -ForegroundColor Yellow
+                    Write-Host "This function is NOT fully implemented yet !!!" -ForegroundColor Yellow
+                } else {
+                    Write-Host "New JiT configuration could not be written to AD - aborting ..." -ForegroundColor Red
+                    $success = $false
+                }
             } else {
-                Write-Host "New JiT configuration could not be written to AD - aborting ..." -ForegroundColor Red
+                Write-Host "New JiT configuration canceled ..." -ForegroundColor Red
                 $success = $false
             }
-        } else {
-            Write-Host "New JiT configuration canceled ..." -ForegroundColor Red
-            $success = $false
         }
     }
 

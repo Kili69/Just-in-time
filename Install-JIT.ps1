@@ -47,8 +47,8 @@ param(
     [string]$JitProgramFolder,
 
     [Parameter(Mandatory = $false,
-        ParameterSetName = "InstallFilesOnly")]
-    [switch]$InstallFilesOnly,
+        ParameterSetName = "LocalInstallOnly")]
+    [switch]LocalInstallOnly,
 
     [Parameter(Mandatory = $false,
         ParameterSetName = "Update")]
@@ -954,10 +954,7 @@ process {
                                 Write-Host 
                                 Write-Host "AD schema not updated for 'Just-in-Time' administration!" -ForegroundColor Yellow
                                 #check for schema admin
-                                #get real schema admin token
-                                $SchemaAdm = whoami /groups | findstr "Schema"
-                                #if (($groupTokens.Value -eq ($forestSid+"-518"))) {
-                                if ($SchemaAdm) {
+                                if ($IsSA) {
                                     if ((Read-YesNoAnswer -Message "Do you want to extend the AD schema now?" -Title "Add JiT schema objects") -eq 1) {
                                         $CnfgObjSchemaExtDone = Update-Schema
                                         $CnfgObjSchemaExtDone = $CnfgObjSchemaExtDone -and (Update-Schema -AddDelegationSchema)
@@ -975,7 +972,7 @@ process {
                                     $exit = $true
                                 }
                             }
-                            #update schema chache
+                            #update schema cache
                             if ($CnfgObjSchemaExtDone) {
                                 $CnfgObjSchemaExtDone = $CnfgObjSchemaExtDone -and (Update-SchemaCache)
                             }
@@ -1022,7 +1019,7 @@ process {
         }
     }
 
-    if ((!$exit) -and ($PSCmdlet.ParameterSetName -eq "InstallFilesOnly")) {
+    if ((!$exit) -and ($PSCmdlet.ParameterSetName -eq "LocalInstallOnly")) {
 
         #continue welcome mask
         Write-Host "--> Installing JiT files ..." -ForegroundColor Yellow
@@ -1106,7 +1103,7 @@ process {
         Write-Host
         #checking if running user is schema admin
         $CurrUser = [System.Security.Principal.WindowsIdentity]::GetCurrent()
-        if ($IsSA) {
+        if ($IsSA -and $HasDaOrEA) {
             #check for elevation
             if ($IsAdmin) {
                 $schemaResult = Update-Schema
@@ -1137,7 +1134,7 @@ process {
                 $exit = $true
             }
         } else {
-            Write-Host "Current run account is not member of 'Schema Admins' - aborting!" -ForegroundColor Red
+            Write-Host "Current run account is not member of 'Schema Admins' or 'Domain/Enterprise Admins' - aborting!" -ForegroundColor Red
             $exit = $true
         }
     }
