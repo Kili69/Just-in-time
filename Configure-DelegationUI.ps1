@@ -67,10 +67,24 @@ Add-Type -TypeDefinition @'
         public static extern bool SetProcessDPIAware();      
     }
 '@
+    
     $null = [ProcessDPI]::SetProcessDPIAware()
     [System.Windows.Forms.Application]::EnableVisualStyles()
     [Windows.Forms.Application]::EnableVisualStyles()
     Import-Module Just-In-Time
+
+    if (!(Get-Variable DefaultJiTADCnfgObjectDN -Scope Global -ErrorAction SilentlyContinue)) {
+        Set-Variable -name DefaultJiTADCnfgObjectDN -value ("CN=Jit-Configuration,CN=Just-In-Time Administration,CN=Services,"+(Get-ADRootDSE).configurationNamingContext) -Scope Global -Option ReadOnly
+    }
+    if (!(Get-Variable JiTAdSearchbase -Scope Global -ErrorAction SilentlyContinue)) {
+        Set-Variable -name JiTAdSearchbase -value ("CN=Delegations,CN=Just-In-Time Administration,CN=Services,"+(Get-ADRootDSE).configurationNamingContext) -Scope Global -Option ReadOnly
+    }
+    if (!(Get-Variable JitDelegationObjClassName -Scope Global -ErrorAction SilentlyContinue)) {
+        Set-Variable -name JitDelegationObjClassName -value "jiT-Delegation Object" -Scope Global -Option ReadOnly
+    }
+    if (!(Get-Variable config -Scope Global -ErrorAction SilentlyContinue)) {
+        Set-Variable -name config -value (Get-JITconfig) -Scope Global -Option AllScope
+    }
 
 
 # define fonts and colors 
@@ -1345,6 +1359,10 @@ Load-PrincipalList -DelegationEntry $objDelegationComboBox.SelectedIndex
 }
 
 end {
+    #clean varables 
+    Remove-Variable -Name DefaultJiTADCnfgObjectDN -Force -ErrorAction SilentlyContinue
+    Remove-Variable -Name JiTAdSearchbase -Force -ErrorAction SilentlyContinue
+    Remove-Variable -Name JitDelegationObjClassName -Force -ErrorAction SilentlyContinue
 }
 
-    
+   

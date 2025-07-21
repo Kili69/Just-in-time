@@ -87,7 +87,7 @@ possibility of such damages
     0x3E9 invalid configuration file version
     0x3EA malformed JSON file
 #>
-[CmdletBinding ( SupportsShouldProcess)]
+#[CmdletBinding (SupportsShouldProcess)]
 
 begin {
     #Script Version
@@ -129,7 +129,8 @@ begin {
     #endregion
 
     #region functions
-    function Write-ScriptLogMessage {
+    function Write-ScriptLogMessage 
+    {
         param (
             [Parameter (Mandatory, Position=0)]
             [string] $Message,
@@ -145,7 +146,8 @@ begin {
         Write-Host $Message -ForegroundColor $ForegroundColor
     }
 
-    function Write-LogFile {
+    function Write-LogFile 
+    {
         param (
             # status message
             [Parameter(Mandatory=$true)]
@@ -167,7 +169,6 @@ begin {
             'Warning' { Write-Host $Message -ForegroundColor Yellow}
             'Information' { Write-Host $Message }
             }
-
     }
 
     function Get-DomainDNSfromDN 
@@ -175,7 +176,7 @@ begin {
         param(
             [Parameter (Mandatory=$true)][string]$AdObjectDN
         )
-        $DomainDNS = (($AdObjectDN.tolower()).substring($AdObjectDN.tolower().IndexOf('dc=')+3).replace(�,dc=�,�.�))
+        $DomainDNS = (($AdObjectDN.tolower()).substring($AdObjectDN.tolower().IndexOf('dc=')+3).replace(",dc=",".""))
         return $DomainDNS
     }
     #endregion
@@ -185,13 +186,13 @@ begin {
         Set-Variable -name DefaultJiTADCnfgObjectDN -value ("CN=Jit-Configuration,CN=Just-In-Time Administration,CN=Services,"+(Get-ADRootDSE).configurationNamingContext) -Scope Global -Option ReadOnly
     }
     if (!(Get-Variable JitCnfgObjClassName -Scope Global -ErrorAction SilentlyContinue)) {
-        Set-Variable -name JitCnfgObjClassName -value "JiT-ConfigurationObject" -Scope Global -Option ReadOnly
+        Set-Variable -name JitCnfgObjClassName -value "JiT-Configuration Object" -Scope Global -Option ReadOnly
     }
     if (!(Get-Variable JiTAdSearchbase -Scope Global -ErrorAction SilentlyContinue)) {
         Set-Variable -name JiTAdSearchbase -value ("CN=Delegations,CN=Just-In-Time Administration,CN=Services,"+(Get-ADRootDSE).configurationNamingContext) -Scope Global -Option ReadOnly
     }
     if (!(Get-Variable JitDelegationObjClassName -Scope Global -ErrorAction SilentlyContinue)) {
-        Set-Variable -name JitDelegationObjClassName -value "JiT-DelegationObject" -Scope Global -Option ReadOnly
+        Set-Variable -name JitDelegationObjClassName -value "JiT-Delegation Object" -Scope Global -Option ReadOnly
     }
     if (!(Get-Variable config -Scope Global -ErrorAction SilentlyContinue)) {
         Set-Variable -name config -value @() -Scope Global -Option AllScope

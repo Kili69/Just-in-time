@@ -59,7 +59,7 @@ possibility of such damages
         - The domain separator can be configured in the JIT.config
     Version 0.1.20240116
         - Bug fix creating OU structure
-        - Bug fix creating schedule task
+        - Bug fix creating scheduled task
     Version 0.1.20240202
         - Bug fix ACL for GMSA
     Version 0.1.20240205
@@ -136,12 +136,12 @@ param (
     [string]$CnfgObjName,
 
     [Parameter (Mandatory=$false,
-        ParameterSetName = "RunLocalInstallationOnly")]
-    [switch]$RunLocalInstallationOnly,
+        ParameterSetName = "RunLocalConfigurationOnly")]
+    [switch]$RunLocalConfigurationOnly,
 
     [Parameter (Mandatory=$false,
-        ParameterSetName = "RunDomainInstallationOnly")]
-    [switch]$RunDomainInstallationOnly,
+        ParameterSetName = "RunDomainConfigurationOnly")]
+    [switch]$RunDomainConfigurationOnly,
 
     [Parameter (Mandatory=$false,
         ParameterSetName = "NewConfig")]
@@ -235,13 +235,13 @@ begin {
         Set-Variable -name DefaultJiTADCnfgObjectDN -value ("CN=Jit-Configuration,CN=Just-In-Time Administration,CN=Services,"+(Get-ADRootDSE -Server $DefaultDomainController).configurationNamingContext) -Scope Global -Option ReadOnly
     }
     if (!(Get-Variable JitCnfgObjClassName -Scope Global -ErrorAction SilentlyContinue)) {
-        Set-Variable -name JitCnfgObjClassName -value "JiT-ConfigurationObject" -Scope Global -Option ReadOnly
+        Set-Variable -name JitCnfgObjClassName -value "JiT-Configuration Object" -Scope Global -Option ReadOnly
     }
     if (!(Get-Variable JiTAdSearchbase -Scope Global -ErrorAction SilentlyContinue)) {
         Set-Variable -name JiTAdSearchbase -value ("CN=Delegations,CN=Just-In-Time Administration,CN=Services,"+(Get-ADRootDSE -Server $DefaultDomainController).configurationNamingContext) -Scope Global -Option ReadOnly
     }
     if (!(Get-Variable JitDelegationObjClassName -Scope Global -ErrorAction SilentlyContinue)) {
-        Set-Variable -name JitDelegationObjClassName -value "jiT-DelegationObject" -Scope Global -Option ReadOnly
+        Set-Variable -name JitDelegationObjClassName -value "JiT-Delegation Object" -Scope Global -Option ReadOnly
     }
     if (!(Get-Variable STGroupManagementTaskName -Scope Global -ErrorAction SilentlyContinue)) {
         Set-Variable -name STGroupManagementTaskName -value "Tier 1 Local Group Management" -Scope Script -Option ReadOnly #Name of the Schedule tasl to enumerate servers
@@ -291,7 +291,7 @@ begin {
     [bool]$CnfgObjEventLogDone = $true
     [bool]$CnfgObjEventSourceDone = $true
     [bool]$CnfgObjElevateEventIDDone = $true
-    [bool]$CnfgObjRequestOnBehalfOfDone = $false
+    [bool]$CnfgObjRequestOnBehalfOfDone = $true
     [bool]$CnfgObjEnableDelegation = $false
     [bool]$CnfgObjDoneDomainSeparatorDone = $true
     #[bool]$CnfgObjUseManagedByforDelegationDone = $false
@@ -902,22 +902,25 @@ begin {
     function Configure-DomainJiTTasks
     {
         param (
-            [Parameter(Mandatory = $false)]
-            [boolean]$SkipDomainActions = $false
-        ) 
+            [Parameter (Mandatory=$false)]
+            [string]$DefaultJiTServer = ""
+        )
 
         $success = $true
         $forceExit = $false
 
         #we need an initial JiT admin server computer account for ancoring the gMSA
         #if script does not run directly on JiT admin server
-        if ($PSCmdlet.ParameterSetName -eq "RunDomainInstallationOnly") {
+        if ($DefaultJiTServer -eq "") {
+            $DefaultJiTServer = (Get-ADComputer -Identity $env:COMPUTERNAME).DistinguishedName
             do {
-                $result = Set-JitCnfgValue -Value $((Get-ADComputer -Identity $env:COMPUTERNAME).DistinguishedName) -Msg "Define initial JiT admin server" -ValueMustDN        }
+                $result = Set-JitCnfgValue -Value $($DefaultJiTServer) -Msg "Define initial JiT admin server" -ValueMustDN
+                $ExitLoop = $false
                 if ($result.toLower() -ne "x") {
                     if (IsDNFormat -DNString $result) {
                         try {
                             $DefaultJiTServer = (get-ADComputer -Identity $result).DistinguishedName
+                            $ExitLoop = $true
                         }
                         catch {
                             Write-Host "Computer:`r`n --> $($result)`r`ncannot be identified!" -ForgroundColor Red
@@ -931,9 +934,13 @@ begin {
                     $success = $false
                     $forceExit = $true
                 }
-            } until (($DefaultJiTServer) -or $forceExit)
+            } until ($ExitLoop -or $forceExit)
         } else {
-            $DefaultJiTServer = (Get-ADComputer -Identity $env:COMPUTERNAME).DistinguishedName
+            if (!(IsDNFormat -DNString $DefaultJiTServer)) {
+                Write-Host "Invalid DN provided for default JiT admin server ($($DefaultJiTServer))..." -ForgroundColor Red
+            }
+            $success = $false
+            $forceExit = $true
         }
 
         if (!$forceExit) {
@@ -943,7 +950,15 @@ begin {
                 Write-Host "Creating gMSA $($global:config.GroupManagedServiceAccountName) failed!" -ForegroundColor Red
             } else {
                 #grant gMSA permissions on Tier 1 JiT Mgmt group OU
-                $success = Configure-JiTGroupOU -DefaultOUName $global:config.OU -objgMSA $objGmsa
+                try {
+                    $success = Configure-JiTGroupOU -DefaultOUName $global:config.OU -objgMSA (Get-ADServiceAccount -Identity $($global:config.GroupManagedServiceAccountName))
+                }
+                catch {
+                    Write-Host "Could not identify gMSA: $($global:config.GroupManagedServiceAccountName)!" -ForegroundColor Red
+                    Write-Host "Aborting!" -ForegroundColor Red
+                    $success = $false
+                    $forceExit = $true
+                }
                 if (!$success){
                     Write-Host "Could not create T1 JiT OU for admin groups: $($global:config.OU)!" -ForegroundColor Red
                     Write-Host "Aborting!" -ForegroundColor Red
@@ -976,10 +991,12 @@ begin {
         }
 
         #move task script to central folder
-        $success = $success -or (Move-CentralTaskScripts)
+        $moveSuccess = Move-CentralTaskScripts
+        $success = $success -or $moveSuccess
 
         #Jit event log
-        $success = $success -or (create-Eventlog)
+        $EventSuccess = create-Eventlog
+        $success = $success -or $EventSuccess
 
         #Jit scheduled tasks
         if (!(create-ScheduledTasks)) {
@@ -1058,7 +1075,7 @@ begin {
                 Write-Host "gMSA $($Name) already exists..." -ForegroundColor Yellow
             }
             $principalsAllowToRetrivePassword = (Get-ADServiceAccount -Identity $Name -Properties PrincipalsAllowedToRetrieveManagedPassword).PrincipalsAllowedToRetrieveManagedPassword
-            if (($principalsAllowToRetrivePassword.Count -eq 0) -or ($principalsAllowToRetrivePassword.Value -notcontains $TargetComputerName){
+            if (($principalsAllowToRetrivePassword.Count -eq 0) -or ($principalsAllowToRetrivePassword.Value -notcontains $TargetComputerName)) {
                 Write-Host "Adding current computer to the list of computer who will retrive the password" -ForegroundColor Yellow
                 $principalsAllowToretrivePassword.Add($TargetComputerName)
                 Set-ADServiceAccount -Identity $Name -PrincipalsAllowedToRetrieveManagedPassword $principalsAllowToRetrivePassword -Server $Domain
@@ -1127,7 +1144,7 @@ begin {
         $STElevateUser = "Elevate User" 
 
         #region creating Scheduled Task Section
-        Write-Host "creating schedule task to evaluate required Administrator groups" -ForegroundColor Yellow
+        Write-Host "creating scheduled task for JiT administration " -ForegroundColor Yellow
         $STprincipal = New-ScheduledTaskPrincipal -UserId "$((Get-ADDomain).NetbiosName)\$((Get-ADServiceAccount $global:config.GroupManagedServiceAccountName).SamAccountName)" -LogonType Password
         If (!((Get-ScheduledTask).URI -contains "$StGroupManagementTaskPath\$STGroupManagementTaskName"))
         {
@@ -1434,19 +1451,33 @@ begin {
     $forestSid = (Get-ADDomain -server (Get-ADForest).rootdomain|Select-Object domainsid).domainsid.Value
     $HasDaOrEA = (($groupTokens.Value -eq ($forestSid+"-512")) -or ($groupTokens.Value -eq ($forestSid+"-519")))
 
-    #checking if reg path exists - exit if not
-    if (!(Test-Path $DefaultSetupRegPath)) {
-        Write-Host "'Just-in-Time' registry not found!" -ForegroundColor Red
-        Write-Host "'Just-in-Time' administration is not properly installed!" -ForegroundColor Red
-        Write-Host
-        Write-Host "Please run Install-JiT.ps1 before continuing!" -ForegroundColor Magenta
-        $exit = $true
-    } else {
-        if ((Get-ItemProperty -Path $DefaultSetupRegPath -Name "SetupStatus").SetupStatus -ne 1004) { 
+    if (($PSCmdlet.ParameterSetName -eq "FullConfig") -or ($PSCmdlet.ParameterSetName -eq "AddServer") -or ($PSCmdlet.ParameterSetName -eq "RunLocalConfigurationOnly")) {
+        #checking if reg path exists - exit if not
+        if (!(Test-Path $DefaultSetupRegPath)) {
+            Write-Host "'Just-in-Time' registry not found!" -ForegroundColor Red
             Write-Host "'Just-in-Time' administration is not properly installed!" -ForegroundColor Red
             Write-Host
             Write-Host "Please run Install-JiT.ps1 before continuing!" -ForegroundColor Magenta
             $exit = $true
+        } else {
+            if ($PSCmdlet.ParameterSetName -eq "RunLocalConfigurationOnly") {
+                #if we do local config only, we cannot assume setup status to be 1004
+                #but we must have 1001 at least
+                if ((Get-ItemProperty -Path $DefaultSetupRegPath -Name "SetupStatus").SetupStatus -gt 1000) { 
+                    Write-Host "'Just-in-Time' administration is not properly installed!" -ForegroundColor Red
+                    Write-Host
+                    Write-Host "Please run Install-JiT.ps1 before continuing!" -ForegroundColor Magenta
+                    $exit = $true
+                }
+            } else {
+                #setup status must be 1004
+                if ((Get-ItemProperty -Path $DefaultSetupRegPath -Name "SetupStatus").SetupStatus -ne 1004) { 
+                    Write-Host "'Just-in-Time' administration is not properly installed!" -ForegroundColor Red
+                    Write-Host
+                    Write-Host "Please run Install-JiT.ps1 before continuing!" -ForegroundColor Magenta
+                    $exit = $true
+                }
+            }
         }
     }
     $ComputerIdentity = [System.Security.Principal.WindowsIdentity]::GetCurrent().name
@@ -1555,52 +1586,49 @@ process {
             Exit 0x5
         }
 
-        if (!$LocalInstallOnly) {
-            if ((ConfigurationMenu) -eq "Success") {
+        if ((ConfigurationMenu) -eq "Success") {
 
-                #writing configuration
-                if (Write-JitConfig2AD) { #continue
-                    Set-ItemProperty -Path $DefaultSetupRegPath -Name "ConfigStatus" -Value 2001 | Out-Null
-                    if (Configure-JiT) {
-                        Set-ItemProperty -Path $DefaultSetupRegPath -Name "ConfigStatus" -Value 2004 | Out-Null
+            #writing configuration
+            if (Write-JitConfig2AD) { #continue
+                Set-ItemProperty -Path $DefaultSetupRegPath -Name "ConfigStatus" -Value 2001 | Out-Null
+                if (Configure-JiT) {
+                    Set-ItemProperty -Path $DefaultSetupRegPath -Name "ConfigStatus" -Value 2004 | Out-Null
+                    Write-Host 
+                    Write-Host "JiT configuration successfully finished !" -ForegroundColor Yellow
+                    if ($global:config.EnableDelegation) {
                         Write-Host 
-                        Write-Host "JiT configuration successfully finished !" -ForegroundColor Yellow
-                        if ($global:config.EnableDelegation){
-                            Write-Host 
-                            Write-Host 
-                            Write-Host "Do not forget to configure the delegations!" -ForegroundColor Magenta
-                        }
-                    } else {
-                        Write-Host "JiT configuration could not successfully finished - aborting ..." -ForegroundColor Red
-                        $success = $false
+                        Write-Host 
+                        Write-Host "Do not forget to configure the delegations!" -ForegroundColor Magenta
                     }
                 } else {
-                    Write-Host "JiT configuration could not be written to AD - aborting ..." -ForegroundColor Red
+                    Write-Host "JiT configuration could not successfully finished - aborting ..." -ForegroundColor Red
                     $success = $false
                 }
             } else {
-                Write-Host "JiT configuration canceled ..." -ForegroundColor Red
+                Write-Host "JiT configuration could not be written to AD - aborting ..." -ForegroundColor Red
                 $success = $false
             }
         } else {
-            if (Configure-JiT -$LocalInstallOnly:(if($SkipDomainActions) {$true} else {$false}) {
-                Set-ItemProperty -Path $DefaultSetupRegPath -Name "ConfigStatus" -Value 2004 | Out-Null
-                Write-Host 
-                Write-Host "JiT configuration successfully finished !" -ForegroundColor Yellow
-                if ($global:config.EnableDelegation){
-                    Write-Host 
-                    Write-Host 
-                    Write-Host "Do not forget to configure the delegations!" -ForegroundColor Magenta
-                }
-            } else {
-                Write-Host "JiT configuration could not successfully finished - aborting ..." -ForegroundColor Red
-                $success = $false
-            }
-
+            Write-Host "JiT configuration canceled ..." -ForegroundColor Red
+            $success = $false
         }
+        if ((Configure-DomainJiTTasks) -and (Configure-LocalJiTTasks)) {
+            Set-ItemProperty -Path $DefaultSetupRegPath -Name "ConfigStatus" -Value 2004 | Out-Null
+            Write-Host 
+            Write-Host "JiT configuration successfully finished !" -ForegroundColor Yellow
+            if ($global:config.EnableDelegation){
+                Write-Host 
+                Write-Host 
+                Write-Host "Do not forget to configure the delegations!" -ForegroundColor Magenta
+            }
+        } else {
+            Write-Host "JiT configuration could not successfully finished - aborting ..." -ForegroundColor Red
+            $success = $false
+        }
+
     }
     
-    if ($PSCmdlet.ParameterSetName -eq "RunDomainInstallationOnly") {
+    if ($PSCmdlet.ParameterSetName -eq "RunDomainConfigurationOnly") {
         #exit if requirements are not met
         if (!($IsAdmin -and $HasDaOrEA)) {
             Write-Host "Current run account is either not local administrator or not a member of Domain/Enterprise Admins... " -ForegroundColor Red
@@ -1616,7 +1644,7 @@ process {
                 #writing configuration
                 if (Write-JitConfig2AD) { #continue
                     $result = Configure-DomainJiTTasks
-                    if (!($result[1]) { #forceExit -eq $true
+                    if (!($result[1])) { #forceExit -eq $true
                         Write-Host 
                         Write-Host "JiT domain configuration successfully finished !" -ForegroundColor Yellow
                         if ($global:config.EnableDelegation){
@@ -1641,7 +1669,7 @@ process {
         }
     }
     
-    if ($PSCmdlet.ParameterSetName -eq "RunLocalInstallationOnly") {
+    if ($PSCmdlet.ParameterSetName -eq "RunLocalConfigurationOnly") {
         #exit if requirements are not met
         if (!$IsAdmin) {
             Write-Host "Current run account is not local administrator ... " -ForegroundColor Red
