@@ -235,13 +235,10 @@ begin {
         Set-Variable -name DefaultJiTADCnfgObjectDN -value ("CN=Jit-Configuration,CN=Just-In-Time Administration,CN=Services,"+(Get-ADRootDSE -Server $DefaultDomainController).configurationNamingContext) -Scope Global -Option ReadOnly
     }
     if (!(Get-Variable JitCnfgObjClassName -Scope Global -ErrorAction SilentlyContinue)) {
-        Set-Variable -name JitCnfgObjClassName -value "JiT-Configuration Object" -Scope Global -Option ReadOnly
+        Set-Variable -name JitCnfgObjClassName -value "JiT-ConfigurationObject" -Scope Global -Option ReadOnly
     }
     if (!(Get-Variable JiTAdSearchbase -Scope Global -ErrorAction SilentlyContinue)) {
         Set-Variable -name JiTAdSearchbase -value ("CN=Delegations,CN=Just-In-Time Administration,CN=Services,"+(Get-ADRootDSE -Server $DefaultDomainController).configurationNamingContext) -Scope Global -Option ReadOnly
-    }
-    if (!(Get-Variable JitDelegationObjClassName -Scope Global -ErrorAction SilentlyContinue)) {
-        Set-Variable -name JitDelegationObjClassName -value "JiT-Delegation Object" -Scope Global -Option ReadOnly
     }
     if (!(Get-Variable STGroupManagementTaskName -Scope Global -ErrorAction SilentlyContinue)) {
         Set-Variable -name STGroupManagementTaskName -value "Tier 1 Local Group Management" -Scope Script -Option ReadOnly #Name of the Schedule tasl to enumerate servers
@@ -1838,7 +1835,6 @@ end {
     Remove-Variable -Name DefaultJiTADCnfgObjectDN -Force -ErrorAction SilentlyContinue
     Remove-Variable -Name JitCnfgObjClassName -Force -ErrorAction SilentlyContinue
     Remove-Variable -Name JiTAdSearchbase -Force -ErrorAction SilentlyContinue
-    Remove-Variable -Name JitDelegationObjClassName -Force -ErrorAction SilentlyContinue
     Remove-Variable -Name STGroupManagementTaskName -Force -ErrorAction SilentlyContinue
     Remove-Variable -Name StGroupManagementTaskPath -Force -ErrorAction SilentlyContinue
     Remove-Variable -Name STElevateUser -Force -ErrorAction SilentlyContinue

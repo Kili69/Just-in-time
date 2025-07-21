@@ -80,7 +80,7 @@ Add-Type -TypeDefinition @'
         Set-Variable -name JiTAdSearchbase -value ("CN=Delegations,CN=Just-In-Time Administration,CN=Services,"+(Get-ADRootDSE).configurationNamingContext) -Scope Global -Option ReadOnly
     }
     if (!(Get-Variable JitDelegationObjClassName -Scope Global -ErrorAction SilentlyContinue)) {
-        Set-Variable -name JitDelegationObjClassName -value "jiT-Delegation Object" -Scope Global -Option ReadOnly
+        Set-Variable -name JitDelegationObjClassName -value "jiT-DelegationObject" -Scope Global -Option ReadOnly
     }
     if (!(Get-Variable config -Scope Global -ErrorAction SilentlyContinue)) {
         Set-Variable -name config -value (Get-JITconfig) -Scope Global -Option AllScope

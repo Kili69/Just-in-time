@@ -146,13 +146,13 @@ begin {
         Set-Variable -name DefaultJiTADCnfgObjectDN -value ("CN=Jit-Configuration,CN=Just-In-Time Administration,CN=Services,"+(Get-ADRootDSE).configurationNamingContext) -Scope Global -Option ReadOnly
     }
     if (!(Get-Variable JitCnfgObjClassName -Scope Global -ErrorAction SilentlyContinue)) {
-        Set-Variable -name JitCnfgObjClassName -value "JiT-Configuration Object" -Scope Global -Option ReadOnly
+        Set-Variable -name JitCnfgObjClassName -value "JiT-ConfigurationObject" -Scope Global -Option ReadOnly
     }
     if (!(Get-Variable JiTAdSearchbase -Scope Global -ErrorAction SilentlyContinue)) {
         Set-Variable -name JiTAdSearchbase -value ("CN=Delegations,CN=Just-In-Time Administration,CN=Services,"+(Get-ADRootDSE).configurationNamingContext) -Scope Global -Option ReadOnly
     }
     if (!(Get-Variable JitDelegationObjClassName -Scope Global -ErrorAction SilentlyContinue)) {
-        Set-Variable -name JitDelegationObjClassName -value "JiT-Delegation Object" -Scope Global -Option ReadOnly
+        Set-Variable -name JitDelegationObjClassName -value "JiT-DelegationObject" -Scope Global -Option ReadOnly
     }
     if (!(Get-Variable DefaultJitProgramFolder -Scope Global -ErrorAction SilentlyContinue)) {
         Set-Variable -name DefaultJitProgramFolder -value ($env:ProgramFiles +"\Just-In-Time") -Scope Global -Option ReadOnly
