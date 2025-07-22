@@ -237,6 +237,12 @@ begin {
     if (!(Get-Variable JitCnfgObjClassName -Scope Global -ErrorAction SilentlyContinue)) {
         Set-Variable -name JitCnfgObjClassName -value "JiT-ConfigurationObject" -Scope Global -Option ReadOnly
     }
+    if (!(Get-Variable JitCnfgClassSchemaName -Scope Global -ErrorAction SilentlyContinue)) {
+        Set-Variable -name JitCnfgClassSchemaName -value "JiT-Configuration Object" -Scope Global -Option ReadOnly
+    }
+    if (!(Get-Variable JitDelegationClassSchemaName -Scope Global -ErrorAction SilentlyContinue)) {
+        Set-Variable -name JitDelegationClassSchemaName -value "JiT-Delegation Object" -Scope Global -Option ReadOnly
+    }
     if (!(Get-Variable JiTAdSearchbase -Scope Global -ErrorAction SilentlyContinue)) {
         Set-Variable -name JiTAdSearchbase -value ("CN=Delegations,CN=Just-In-Time Administration,CN=Services,"+(Get-ADRootDSE -Server $DefaultDomainController).configurationNamingContext) -Scope Global -Option ReadOnly
     }
@@ -1480,6 +1486,7 @@ begin {
     $ComputerIdentity = [System.Security.Principal.WindowsIdentity]::GetCurrent().name
     $ComputerNBDomain = $ComputerIdentity.split("\")[0]
     $ComputerDomainFQDN = (Get-ADObject -Filter 'netbiosname -eq $ComputerNBDomain' -searchbase (Get-ADForest).partitionscontainer -Properties dnsroot).dnsroot
+
 }
 
 #############################################################################################
@@ -1494,15 +1501,14 @@ process {
     }
 
     #checking for JiT schema in AD
-    $JitCnfgClass = 'JiT-Configuration Object'
-    $JitDelegationClass = 'JiT-Delegation Object'
 
     try {
-        Get-ADObject -Identity "CN=$($JitDelegationClass),$((Get-ADRootDSE).schemaNamingContext)"|Out-Null
+        Get-ADObject -Identity "CN=$($JitDelegationClassSchemaName),$((Get-ADRootDSE).schemaNamingContext)"|Out-Null
+        Get-ADObject -Identity "CN=$($JitCnfgClassSchemaName),$((Get-ADRootDSE).schemaNamingContext)"|Out-Null
         $CnfgObjSchemaExtDone = $true
     } catch {
         #JiT schema missing
-        Write-Output "JiT schema extensios are missing in Active Directory ..."
+        Write-Output "JiT schema extensions are missing in Active Directory ..."
         $success = $false
     }
 
@@ -1701,7 +1707,7 @@ process {
             }
 
             $result = Configure-LocalJiTTasks
-            if (!$result[1]) { #$forceExit -eq $true
+            if (!($result[1])) { #$forceExit -ne $true
                 Set-ItemProperty -Path $DefaultSetupRegPath -Name "ConfigStatus" -Value 2004 | Out-Null
                 Write-Host 
                 Write-Host "Local JiT configuration successfully finished !" -ForegroundColor Yellow
@@ -1834,6 +1840,8 @@ end {
     #clean varables 
     Remove-Variable -Name DefaultJiTADCnfgObjectDN -Force -ErrorAction SilentlyContinue
     Remove-Variable -Name JitCnfgObjClassName -Force -ErrorAction SilentlyContinue
+    Remove-Variable -name JitCnfgClassSchemaName -Scope Global -force -ErrorAction SilentlyContinue
+    Remove-Variable -name JitDelegationClassSchemaName -Scope Global -force -ErrorAction SilentlyContinue
     Remove-Variable -Name JiTAdSearchbase -Force -ErrorAction SilentlyContinue
     Remove-Variable -Name STGroupManagementTaskName -Force -ErrorAction SilentlyContinue
     Remove-Variable -Name StGroupManagementTaskPath -Force -ErrorAction SilentlyContinue
