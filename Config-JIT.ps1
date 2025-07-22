@@ -1466,7 +1466,16 @@ begin {
             if ($PSCmdlet.ParameterSetName -eq "RunLocalConfigurationOnly") {
                 #if we do local config only, we cannot assume setup status to be 1004
                 #but we must have 1001 at least
-                if ((Get-ItemProperty -Path $DefaultSetupRegPath -Name "SetupStatus").SetupStatus -gt 1000) { 
+                try {
+                    if (!((Get-ItemProperty -Path $DefaultSetupRegPath -Name "SetupStatus").SetupStatus -gt 1000)) { 
+                        Write-Host "'Just-in-Time' administration is not properly installed!" -ForegroundColor Red
+                        Write-Host
+                        Write-Host "Please run Install-JiT.ps1 before continuing!" -ForegroundColor Magenta
+                        $exit = $true
+                    }
+                }
+                catch {
+                    Write-Host "'Just-in-Time' administration registry not found!" -ForegroundColor Red
                     Write-Host "'Just-in-Time' administration is not properly installed!" -ForegroundColor Red
                     Write-Host
                     Write-Host "Please run Install-JiT.ps1 before continuing!" -ForegroundColor Magenta
@@ -1696,14 +1705,29 @@ process {
             }
             #setting initial reg value
             try{
-                New-ItemProperty -Path $DefaultSetupRegPath -Name "ConfigStatus" -PropertyType dword -Value 2000 | Out-Null
+                New-ItemProperty -Path $DefaultSetupRegPath -Name "ConfigStatus" -PropertyType dword -Value 2000 -erroraction stop | Out-Null
             } catch {
-                Write-Host "Could not create 'Just-in-Time' registry!" -ForegroundColor Red
-                Write-Host $_.Exception.Message -ForegroundColor Red
-                Write-Host
-                Write-Host "'Just-in-Time' configuration failed!" -ForegroundColor Red
-                $success = $false
-                Exit 0x5
+                if (($_.Exception.InnerExceptionMessage) -match "The property already exists") {
+                    Write-Host "'Just-in-Time' registry key already exist!" -ForegroundColor green
+                    try {
+                        Set-ItemProperty -Path $DefaultSetupRegPath -Name "ConfigStatus" -Value 2000 -erroraction stop | Out-Null
+                    }
+                    catch {
+                        Write-Host "Could not create 'Just-in-Time' registry!" -ForegroundColor Red
+                        Write-Host $_.Exception.Message -ForegroundColor Red
+                        Write-Host
+                        Write-Host "'Just-in-Time' configuration failed!" -ForegroundColor Red
+                        $success = $false
+                        Exit 0x5
+                    }
+                } else {
+                    Write-Host "Could not create 'Just-in-Time' registry!" -ForegroundColor Red
+                    Write-Host $_.Exception.Message -ForegroundColor Red
+                    Write-Host
+                    Write-Host "'Just-in-Time' configuration failed!" -ForegroundColor Red
+                    $success = $false
+                    Exit 0x5
+                }
             }
 
             $result = Configure-LocalJiTTasks
