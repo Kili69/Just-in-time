@@ -1703,25 +1703,26 @@ process {
                 $success = $false
                 Exit 0x5
             }
-            #setting initial reg value
-            try{
-                New-ItemProperty -Path $DefaultSetupRegPath -Name "ConfigStatus" -PropertyType dword -Value 2000 -erroraction stop | Out-Null
-            } catch {
-                if (($_.Exception.InnerExceptionMessage) -match "The property already exists") {
-                    Write-Host "'Just-in-Time' registry key already exist!" -ForegroundColor green
-                    try {
-                        Set-ItemProperty -Path $DefaultSetupRegPath -Name "ConfigStatus" -Value 2000 -erroraction stop | Out-Null
-                    }
-                    catch {
-                        Write-Host "Could not create 'Just-in-Time' registry!" -ForegroundColor Red
-                        Write-Host $_.Exception.Message -ForegroundColor Red
-                        Write-Host
-                        Write-Host "'Just-in-Time' configuration failed!" -ForegroundColor Red
-                        $success = $false
-                        Exit 0x5
-                    }
-                } else {
-                    Write-Host "Could not create 'Just-in-Time' registry!" -ForegroundColor Red
+            #checking reg path exists
+            if (!((Get-ItemProperty $DefaultSetupRegPath).PsObject.Properties.Where({$_.Name -like 'ConfigStatus'}))) {
+                #setting initial reg value
+                try{
+                    New-ItemProperty -Path $DefaultSetupRegPath -Name "ConfigStatus" -PropertyType dword -Value 2000 -erroraction stop | Out-Null
+                } catch {
+                    Write-Host "Could not create 'Just-in-Time' registry value 'ConfigStatus'!" -ForegroundColor Red
+                    Write-Host $_.Exception.Message -ForegroundColor Red
+                    Write-Host
+                    Write-Host "'Just-in-Time' configuration failed!" -ForegroundColor Red
+                    $success = $false
+                    Exit 0x5
+                }
+            } else {
+                #reg key already exists
+                try {
+                    Set-ItemProperty -Path $DefaultSetupRegPath -Name "ConfigStatus" -Value 2000 -erroraction stop | Out-Null
+                }
+                catch {
+                    Write-Host "Could not set 'Just-in-Time' registry value 'ConfigStatus'!" -ForegroundColor Red
                     Write-Host $_.Exception.Message -ForegroundColor Red
                     Write-Host
                     Write-Host "'Just-in-Time' configuration failed!" -ForegroundColor Red
@@ -1729,7 +1730,6 @@ process {
                     Exit 0x5
                 }
             }
-
             $result = Configure-LocalJiTTasks
             if (!($result[1])) { #$forceExit -ne $true
                 Set-ItemProperty -Path $DefaultSetupRegPath -Name "ConfigStatus" -Value 2004 | Out-Null
