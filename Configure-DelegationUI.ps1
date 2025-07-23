@@ -501,7 +501,7 @@ Add-Type -TypeDefinition @'
         param(
             [Parameter (Mandatory=$true)][string]$AdObjectDN
         )
-        $DomainDNS = (($AdObjectDN.tolower()).substring($AdObjectDN.tolower().IndexOf('dc=')+3).replace(',dc=','.''))
+        $DomainDNS = (($AdObjectDN.tolower()).substring($AdObjectDN.tolower().IndexOf('dc=')+3).replace(',dc=','.'))
         return $DomainDNS
     }
 

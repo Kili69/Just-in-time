@@ -51,6 +51,10 @@ param(
     [switch]$LocalInstallOnly,
 
     [Parameter(Mandatory = $false,
+        ParameterSetName = "InstallJitDelegationUIOnly")]
+    [switch]$InstallJitDelegationUIOnly,
+
+    [Parameter(Mandatory = $false,
         ParameterSetName = "Update")]
     [switch]$UpdateConfiguration,
 
@@ -705,7 +709,71 @@ begin {
         return $ret
     }
 
-    function Move-CentralTaskScripts
+     function Install-JiTDelegationUI
+    {
+        param (
+            [Parameter(Mandatory = $false)][string]$JitProgramFolder
+        )
+
+        #list of JiT program files
+        $JitFileList = @(
+            "Configure-DelegationUI.ps1",
+        )
+
+        #we assume all works well
+        $ret = $true
+
+        if ($null -ne $JitProgramFolder){
+            $JitProgramFolder = $env:ProgramFiles +"\Just-In-Time"
+        } else {
+            $JitProgramFolder = $DefaultJitProgramFolder
+        }
+
+        Write-Host "Select 'Just-In-Time' programm folder..." -ForegroundColor Yellow
+        $TargetDir = Read-Host "Installation Directory ($JitProgramFolder)"
+        if ($TargetDir -eq ""){
+            $TargetDir = $JitProgramFolder
+        }
+        try {
+            if (!(Test-Path -Path $TargetDir)) {
+                New-Item -Path $TargetDir -ItemType Directory -ErrorAction Stop
+            }
+
+            Write-Host "Copying 'Just-In-Time' programm files..." -ForegroundColor Yellow
+            #copy program files
+            $JitFileList | ForEach-Object {
+                Write-Host "---> File: $($_)" -ForegroundColor Yellow
+                #get full file path
+                $FileName = Get-Item $_ -ErrorAction SilentlyContinue
+                if ($FileName) {
+                    Copy-Item $FileName.FullName $TargetDir -ErrorAction Stop -Force -Verbose
+                } else {
+                    Write-Host "File: $($_) does not exists - skipping..." -ForegroundColor Red
+                }
+                Write-Host
+            }
+
+            # copying the module files
+            if (!(Test-Path "$($env:ProgramFiles)\WindowsPowerShell\Modules\Just-In-Time") ){
+                New-Item "$($env:ProgramFiles)\WindowsPowerShell\Modules\Just-In-Time" -ItemType Directory -ErrorAction Stop -Verbose
+            }
+            Copy-Item .\modules\* -Destination "$($env:ProgramFiles)\WindowsPowerShell\Modules\Just-In-time" -Recurse -ErrorAction Stop -Force 
+            #Set-Location -Path $TargetDir
+        } 
+        catch [System.UnauthorizedAccessException] {
+            Write-Host "A access denied error occured" -ForegroundColor Red
+            Write-Host "Run the installation as administrator"
+            $ret = $false
+        }
+        catch{
+            Write-Host "A unexpected error is occured" -ForegroundColor Red
+            $Error[0] 
+            $ret = $false
+        }
+        return $ret
+    }
+
+   function Move-CentralTaskScripts
     {
         #assuming all goes well
         $ret = $true
@@ -1074,6 +1142,59 @@ process {
                     
                 if (!$exit) {
                     Set-ItemProperty -Path $DefaultSetupRegPath -Name "SetupStatus" -Value 1001 | Out-Null
+                }
+            } else {
+                Write-Host "Current run session is not elevated - aborting!" -ForegroundColor Red
+                $exit = $true
+            }
+        }
+    }
+    
+    if ((!$exit) -and ($PSCmdlet.ParameterSetName -eq "InstallJitDelegationUIOnly")) {
+
+        #continue welcome mask
+        Write-Host "--> Installing JiT Delegation UI files ..." -ForegroundColor Yellow
+        Write-Host "###################################################################" -ForegroundColor Yellow
+        Write-Host
+
+        #checking for JiT schema in AD
+        try {
+            Get-ADObject -Identity "CN=$($JitDelegationClassSchemaName),$((Get-ADRootDSE).schemaNamingContext)"
+            $CnfgObjSchemaExtDone = $true
+        } catch {
+            #JiT schema missing
+            Write-Host 
+            Write-Host "AD schema not updated for Just-in-Time administration!" -ForegroundColor Yellow
+            Write-Host "Installation cannot proceed!" -ForegroundColor Red
+            Write-Host "Either run full installation or run:" -ForegroundColor Red
+            Write-Host "install-JiT.ps1 -ExtendSchema" -ForegroundColor Magenta
+            $exit = $true
+        }
+        #checking for JiT AD structure
+        if (!$exit) {
+            try {
+                Get-ADObject -Identity $DefaultJiTADCnfgObjectDN|Out-Null
+            }
+            catch {
+                #JiT AD structure missing
+                Write-Host "JiT structure in Active Directory missing ..." -ForegroundColor Yellow
+                Write-Host "Installation cannot proceed!" -ForegroundColor Red
+                Write-Host "Either run full installation or run:" -ForegroundColor Red
+                Write-Host "install-JiT.ps1 -createAdStructure" -ForegroundColor Magenta
+                $exit = $true
+            }
+        }
+
+        if (!$exit) {
+            #checking if running user is Domain admin or Enterprise admin
+            #check for elevation
+            if ($IsAdmin) {
+                #installing files 1st
+                if (!(Install-JiTDelegationUI)) {
+                    Write-Host 
+                    Write-Host 
+                    Write-Host "Just-in-Time installation failed!" -ForegroundColor Red
+                    $exit = $true
                 }
             } else {
                 Write-Host "Current run session is not elevated - aborting!" -ForegroundColor Red
