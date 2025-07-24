@@ -717,7 +717,7 @@ begin {
 
         #list of JiT program files
         $JitFileList = @(
-            "Configure-DelegationUI.ps1",
+            "Configure-DelegationUI.ps1"
         )
 
         #we assume all works well
