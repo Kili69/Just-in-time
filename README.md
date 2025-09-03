@@ -1,5 +1,18 @@
-# Introduction 
-**For more details read [JiT Install Guide.pdf](https://github.com/Kili69/Just-in-time/blob/main/JiT%20Install%20Guide.pdf)**
+# Just-In-Time Active Directory Access
+
+## Repository 
+The directory structure of this repo is as follows:
+
+```
+/build => scripts to create a release version
+/doc => documentation
+/release => all files required for deployment
+/src => source code
+```
+
+## Introduction
+
+*For more details read [JiT Install Guide.pdf]https://./doc/Jit%20Install%20Guide.pdf *
 
 This is a active directory Just-In-Time solution based on the Active Directory Version 2016 or higher and powershell scripts. The reduce the risk of a administrator ist 24x7 administrator on all or many computers. 
 The principal of this project is: Each server has a domain local group in the active directory. This group is added to the local administrators of a server via group policy.  
@@ -12,26 +25,26 @@ The project is based on:
 4) A scheduled task to add a user to one of these tasks. this task is triggered by an event
 5) A powershell script which triggers the scheduled task
 
-# Getting Started
+## Getting Started
 Before you start with this solutions, take care the Active Directory Forest functional levle is Windows Server 2016 or higher.
 Provide a AD joined server with privileged access to T0 users or local user accounts. Take care Tier 1 users have only user privileg.
 
-Pre-Reqs:
+### Pre-Reqs:
 - AD Optional feature "Privileged Access Management Feature" needs to be installed
   
 	  Enable-ADOptionalFeature "Privileged Access Management Feature" –Scope ForestOrConfigurationSet -Target <domainFQDN>
 - RSAT-AD-Powershell feature needs to be installed on T1 JiT mgmt server
 
 
-1.	Installation process
-1.1. Tier 1 local user management server
+### 1.	Installation process
+#### 1.1. Tier 1 local user management server
 Provide a Windows Server 2016 or higher for the Tier 1 local administrator management
-1.2. copy scripts
+#### 1.2. copy scripts
 copy the powershell scripts of this solution to  a directory with read privleged for any authenticated users
-1.2. Organizational Unit
+#### 1.3. Organizational Unit
 Create a Organizational unit for Tier 1 Local Administrators groups. Take care Tier 1 / Tier 2 users have no write access to this OU
-1.3 run configuration
-run the configuration config-jit.ps1. the configuration script asks for:
+### 2. Run Configuration
+Run the configuration config-jit.ps1. The configuration script asks for:
 - Admin Prefix: is the prefix for the active directory group for the local administrator
 - Domain: the DNS Name of the active Directory domain
 - OU: the distinguished path of the O where the groups for the local administrators are created
@@ -40,7 +53,7 @@ run the configuration config-jit.ps1. the configuration script asks for:
 - Installation directory: The working directory for the powershell scripts
 - Elevation time for new server object: GroupManagementTaskRerun is the time how often a schedule task searches for new Tier 1 servers and removes permanent members
 - Name of the group managed service acocunt: This account maintains the groups in the organizational units
-3.	Create a group policy for local administrators
+### 3.	Create a group policy for local administrators
 Create a group policy with a group policy preferences who adds the <Admin-Prefix>%COMPUTERNAME% to the local administrators. Assing this group policy to the Tier 1 server OU
 - take care on localization OS languages (e.g.: on french systems, local administrators group is named "Administrateurs")
 - you might need to use WMI filter for different server OS', e.g.:
@@ -55,7 +68,7 @@ Create a group policy with a group policy preferences who adds the <Admin-Prefix
     [MS-OE376]: Part 4 Section 7.6.2.39, LCID (Locale ID) | Microsoft Learn
     https://learn.microsoft.com/en-us/openspecs/office_standards/ms-oe376/6c085406-a698-4e12-9d4d-c3b0ee3dbc4a
 
-# Build and Test
+## Build and Test
 1. Validate the schedule task who creates the groups in the active directory
 2. Validate the Group Policy add the groups create in the step above to the local administrator groups
 3. Create a local administrator request due running the requestadminaccess.ps1
@@ -65,6 +78,5 @@ Create a group policy with a group policy preferences who adds the <Admin-Prefix
 7. wait till the elevation time is expired
 8. logon as the requested user and validate the user has no more administrator privileges
 
-# Contribute
-TODO: Explain how other users and developers can contribute to make your code better. 
-
+## Contribute
+If you would like to contribute to this project, please fork the repository and submit a pull request with your changes. We welcome contributions that improve the functionality, performance, and usability of the code.
