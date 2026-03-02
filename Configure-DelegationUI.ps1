@@ -2,18 +2,18 @@
 Script Info
 
 Author: Andreas Luy[MSFT]
-Download: 
+Download:
 
 Disclaimer:
-This sample script is not supported under any Microsoft standard support program or service. 
-The sample script is provided AS IS without warranty of any kind. Microsoft further disclaims 
-all implied warranties including, without limitation, any implied warranties of merchantability 
-or of fitness for a particular purpose. The entire risk arising out of the use or performance of 
-the sample scripts and documentation remains with you. In no event shall Microsoft, its authors, 
-or anyone else involved in the creation, production, or delivery of the scripts be liable for any 
-damages whatsoever (including, without limitation, damages for loss of business profits, business 
-interruption, loss of business information, or other pecuniary loss) arising out of the use of or 
-inability to use the sample scripts or documentation, even if Microsoft has been advised of the 
+This sample script is not supported under any Microsoft standard support program or service.
+The sample script is provided AS IS without warranty of any kind. Microsoft further disclaims
+all implied warranties including, without limitation, any implied warranties of merchantability
+or of fitness for a particular purpose. The entire risk arising out of the use or performance of
+the sample scripts and documentation remains with you. In no event shall Microsoft, its authors,
+or anyone else involved in the creation, production, or delivery of the scripts be liable for any
+damages whatsoever (including, without limitation, damages for loss of business profits, business
+interruption, loss of business information, or other pecuniary loss) arising out of the use of or
+inability to use the sample scripts or documentation, even if Microsoft has been advised of the
 possibility of such damages
 #
 #
@@ -30,16 +30,16 @@ possibility of such damages
    none
 .NOTES
     Version Tracking
-    2025-01-07 
+    2025-01-07
     Version 0.1
         - initial version
-    2025-03-27 
+    2025-03-27
     Version 1.1
         - stable version
 
 
 .PARAMETER title
-    if specifying a different windows title 
+    if specifying a different windows title
 #>
 Param(
     [Parameter (Mandatory=$false)]
@@ -64,7 +64,7 @@ Add-Type -TypeDefinition @'
     using System.Runtime.InteropServices;
     public class ProcessDPI {
         [DllImport("user32.dll", SetLastError=true)]
-        public static extern bool SetProcessDPIAware();      
+        public static extern bool SetProcessDPIAware();
     }
 '@
     $null = [ProcessDPI]::SetProcessDPIAware()
@@ -73,7 +73,7 @@ Add-Type -TypeDefinition @'
     Import-Module Just-In-Time
 
 
-# define fonts and colors 
+# define fonts and colors
     $SuccessFontColor = "Green"
     $WarningFontColor = "Yellow"
     $FailureFontColor = "Red"
@@ -193,7 +193,7 @@ Add-Type -TypeDefinition @'
         if ($IgnoreValidation) {
             $result = Remove-JitDelegation -DelegationObject $DelegationDN -ADPrincipal $AdPrincipal -RemoveAdPrincipalWithoutValidation -Sid $PrincipalSid
         } else {
-            $result = Remove-JitDelegation -DelegationObject $DelegationDN -ADPrincipal $AdPrincipal 
+            $result = Remove-JitDelegation -DelegationObject $DelegationDN -ADPrincipal $AdPrincipal
         }
         return $result
     }
@@ -219,8 +219,8 @@ Add-Type -TypeDefinition @'
     function Add-NewDelegationObject
     {
         $ret = $null
-        
-        # if Multi-Domain Mode is enabled add all domains to the $aryDomainList otherwise add only 
+
+        # if Multi-Domain Mode is enabled add all domains to the $aryDomainList otherwise add only
         # the current domain to the array
         if ($global:config.EnableMultiDomainSupport) {
             $Domain = (Get-ADForest).RootDomain
@@ -305,7 +305,7 @@ Add-Type -TypeDefinition @'
             $AceGridViewHeight = $AdAclFormHeight-180
         }
         #endregion
-        
+
         $AdAclFormIcon = "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"
         $AdAclFormIconBytes = [Convert]::FromBase64String($AdAclFormIcon)
         $AdAclFormStream = [System.IO.MemoryStream]::new($AdAclFormIconBytes, 0, $AdAclFormIconBytes.Length)
@@ -321,7 +321,7 @@ Add-Type -TypeDefinition @'
         $objAdAclForm.MaximizeBox = $False
         $objAdAclForm.WindowState = "Normal"
         $objAdAclForm.Text ="Configured Access Permission: $($DelegationDN)"
-        
+
         #region data grid view
         $AceGridView = New-Object System.Windows.Forms.DataGridView
         $AceGridView.Location = New-Object System.Drawing.Size(10,10)
@@ -351,9 +351,9 @@ Add-Type -TypeDefinition @'
         $objAdAclFormTextBox = New-Object System.Windows.Forms.TextBox
         $objAdAclFormTextBox.Location = New-Object System.Drawing.Point(10,($AdAclFormHeight-160))
         $objAdAclFormTextBox.Size = New-Object System.Drawing.Size(($AdAclFormWidth-30),80)
-        $objAdAclFormTextBox.ReadOnly = $true 
+        $objAdAclFormTextBox.ReadOnly = $true
         $objAdAclFormTextBox.Multiline = $true
-        $objAdAclFormTextBox.AcceptsReturn = $true 
+        $objAdAclFormTextBox.AcceptsReturn = $true
         $objAdAclFormTextBox.Text = ""
         $objAdAclFormTextBox.Font = "Microsoft Sans Serif, 11"
         $objAdAclFormTextBox.Visible = (!$ViewOnly)
@@ -381,7 +381,7 @@ Add-Type -TypeDefinition @'
 
         #region initial grid load
         $ObjectAcl = (Get-Acl "AD:/$($DelegationDN)").access | select identityreference, accesscontroltype, ActiveDirectoryRights, ObjectType
-        foreach ($ace in $ObjectAcl) {    
+        foreach ($ace in $ObjectAcl) {
             [void]$AceGridView.Rows.Add($ace.IdentityReference,$ace.AccessControlType,$ace.ActiveDirectoryRights,$ace.ObjectType)
         }
         #endregion
@@ -395,11 +395,11 @@ Add-Type -TypeDefinition @'
 
         #region event handlers
         $AceGridView.Add_SelectionChanged({
-             $AceGridView.ClearSelection() 
+             $AceGridView.ClearSelection()
         })
 
         $AceGridView.add_MouseDown({
-            $AceGridView.ClearSelection() 
+            $AceGridView.ClearSelection()
         })
 
         $objAdAclFormBtnClose.Add_Click({
@@ -416,7 +416,7 @@ Add-Type -TypeDefinition @'
                     #region reload grid
                     $AceGridView.Rows.Clear()
                     $ObjectAcl = (Get-Acl "AD:/$($DelegationDN)").access | select identityreference, accesscontroltype, ActiveDirectoryRights, ObjectType
-                    foreach ($ace in $ObjectAcl) {    
+                    foreach ($ace in $ObjectAcl) {
                         [void]$AceGridView.Rows.Add($ace.IdentityReference,$ace.AccessControlType,$ace.ActiveDirectoryRights,$ace.ObjectType)
                     }
                     #endregion
@@ -449,7 +449,7 @@ Add-Type -TypeDefinition @'
             $found = $True
         } else {
             #account could not be identified
-            #bring up a grid view 
+            #bring up a grid view
             if ((New-ConfirmationMsgBox -Message "Could not verify write permissions to $($gMSA) for 'groupPriority' attribute!`n`r`n`rDo you want to adjust permissions?") -eq "Yes") {
                 Get-AdDelegationObjectAclView -DelegationDN $ObjectDN -gMSA $gMSA
             }
@@ -482,16 +482,16 @@ Add-Type -TypeDefinition @'
         return ($PsValue -notmatch "\S")
     }
 
-    function Get-DomainDNSfromDN 
+    function Get-DomainDNSfromDN
     {
         param(
             [Parameter (Mandatory=$true)][string]$AdObjectDN
         )
-        $DomainDNS = (($AdObjectDN.tolower()).substring($AdObjectDN.tolower().IndexOf('dc=')+3).replace(�,dc=�,�.�))
+        $DomainDNS = (($AdObjectDN.tolower()).substring($AdObjectDN.tolower().IndexOf('dc=')+3).replace(',dc=','.'))
         return $DomainDNS
     }
 
-    function Get-DNfromDNS 
+    function Get-DNfromDNS
     {
         param(
             [Parameter (Mandatory=$true)][string]$FQDN
@@ -517,7 +517,7 @@ Add-Type -TypeDefinition @'
         return $result
     }
 
-    function Fill-Details 
+    function Fill-Details
     {
 
         param(
@@ -556,7 +556,7 @@ Add-Type -TypeDefinition @'
 
 # heavily based on the idea of
 # https://codeplexarchive.org/project/adexploder
-# 
+#
 # Copyright (c) 2013 Greg Toombs
 #
 
@@ -574,7 +574,7 @@ param(
 $SelectedAdPrincipalDN = ""
 
 Set-Variable -name objClassFilter -Scope Global -Option AllScope
- 
+
 if ($Mode -eq "SelectADPrincipals") {
     $global:objClassFilter = "ADPrincipals"
 } elseif ($Mode -eq "SelectDelegationObject") {
@@ -583,7 +583,7 @@ if ($Mode -eq "SelectADPrincipals") {
     $global:objClassFilter = "All"
 }
 
-#region initializing form    
+#region initializing form
     $formWidth = 500
     $formHeight = 550
     $Panelwidth = $formWidth-200
@@ -591,13 +591,13 @@ if ($Mode -eq "SelectADPrincipals") {
     $iconBase64 = "iVBORw0KGgoAAAANSUhEUgAAAlgAAAHvCAMAAAC/n1G+AAACJVBMVEUAAAAAqvICf6qNwdPZ4+0AqvICf6qNwdPZ4+0AqvICf6qNwdPZ4+0AqvICf6qNwdPZ4+0AqvKNwdPZ4+0AqvICf6qNwdPZ4+0AqvKNwdPZ4+0AqvICf6qNwdO+3O7Z4+0AqvICf6qNwdPZ4+0AqvICf6qNwdPZ4+0AqvICf6qNwdPZ4+0AqvICf6qNwdPZ4+0AqvICf6qNwdPZ4+0AqvKNwdPZ4+0AqvICf6oOrvIrtfGNwdPZ4+0AouUApekAp+4AqvIBjMEBj8UBksoBlc4Bl9MBmtcBndwBn+ACf6oCgq8ChLMCh7gCirwJqewJq/AOrvIQr/MSh68SndMSqOUSquoSre4aruwbrOgbsfEclsQgtfQij7UjreYjsOokpdglkLQptfEsr+QssegwuvQxl7o1rd01sOI1s+Y2o8s2uPE+seA+tORAv/VBn79Hs95HtuNIoL9PtNxPt+FQr9NQsthQxfZRp8VYttpYuN9gyvdhr8pht9hhut1qsclqudZqu9ttx/Bwz/hxt89zutRzvdl1uM97vtd8u9KA1fmBv9WEvdCEwNWIzu+NwdOPxNaP2vmQx9qUxdaV0e+bydmf3/qgz9+izduj0N+j1e6q0d6v5Puw1+Sx1OG12OS42OS+3O6/3Oa/6vzA3+rG4OnI4+zL3+3N5OzP7/3Q5+/R5+/U6O/Z4+3b7PHf7/Tf9P3j8PTq8/fv9/rv+v7x9/r4+/z////ZaoLDAAAAPXRSTlMAEBAQECAgICAwMDAwQEBAQFBQUGBgYGBwcHCAgICAgI+Pj4+fn5+fr6+vr7+/v7/Pz8/P39/f7+/v7+/vwg87dgAALqZJREFUeNrtnf9DU1mW4JOCtDCQIQgjSIZJRtLCQNrQEknvEjUihYAybNwp7RlqnJoqatrpLmqp6h16xbbKpdu14zhZigFdsRzG6K7U+AUVzd+3L1+A9+V+e+/d+77lnB+qFOLLzbmfnHvuueee4/OBgICAgICAeEQagzwE9AiyL62xwQw/GewLA18gPl97MsNdUjFgq8YlMJgRI8l2UG4te1apjDBJtoJ+gSsh0ucHFdfmOiiWK8nXAqNVkxLPCBcwWrW4H8xYIGC0ak+SGUsEjFatee4ZiwSMVm1JNGOZgNEC112Q0YJIfO1IxlKJgtECsMQYLTjjAbDg+BDERWBJVivaCHoHsMSwJaVrAV0AlrtksK8zABMLYAmROEQ2ACyIbABYrloRwYkDsMTsEIAsAEuMzYLVEMASc+wN8wtgCRHYGwJYYqIOMMEAlhAB/x3AEiJhmGEAC9ZCAMs9sSyYYQBLiMAMA1gAFoAFYIEAWCAOBGt2ZavocNlamQWwXAZWdqXoClnJAlhuAmt2q+gS2coCWO4BK7tdLLqeLJhh54FVKLpICgCWW8BaKrpK5gEsl4C15S6wCgCWO8CaLbpMZgEsV4C16DawFgEsV4CVcxtYOQALwAKwACwACwTAArAALAALwAKwQAAsAAvAArAALAALBMACsAAsAAvAArBAACwAC8ACsGoLrKWCy2QJwHIFWHBhFQTAArAALAALwAKwQAAsAAvAArAALAALBMACsAAsAAvAArBAACwAC8ACsAAsAAsEwAKwACwAC8ACsEAALAALwAKwACwACwTAArAALAALwAKwQAAsAAvAArAALAALxBVgzS/m1qV2UHMAFoDFkagdSo8lAAvAYidqPrdS2GZr3gVgAVh0mVPYKAALwDJto5aWs5nZHQPtBgEsAAsls6VVrwzUUma+CGABWKZXvfnlXGFLURYNwAKwTMnSemEbVW8PwAKwTNkqXCFHAAvAMuWoA1ggABYIgAVgAVgAFgiABQJgAVgAFoAFYAFYIAAWgAVgAVgAFoAFAmABWAAWgAVgAVggABaABWABWAAWnzR3HDhzRLDgwiqARb1AgZAs7hdVmc0AWACWmwRm2CtgZR+iWsyvS/cKpQoNxW1MC/qHWQALwDLivM9nlog+1hKABWAZAytHBCsHYAFYxsBaJoK1DGABWMbAgjgWgAVggQBYABaABWABWAAWCIAFYAFYABaABWCBAFgAFoAFYAFYABYIgAVgAVgAFoAFYIE4AqxZAAvEJ+QyxVLuYUF3PhaABWAxLomLCr4ALACL69WK+ar9moOlEMASwFfp3mBuC8ACsMTIrLp3E4AFYIlYIAEsAEswXwAWgCWCrxzchAawXCUwwwAWgAVgAVggwsCanQOwQIyDNVuYzeSWljTVYOa2F5cALBDDYM0Xl7Pb64uLs7nc/LJ0ADifzS1nlnNzucLS9hKABWIYrMKW1Jc+l9tens9tLW3N7+S25pYfLm4vrc9tzQFYIIbByu1sLUpg7UiHfYu5XKawWNjOLWa256U/wlIIYhisXG59fV4Ca2tFWgtnt1d2FnM7i1srBQmsHVgKQYw775Jk5mZns1JpY6mQ6Hw2K5U4npP+J/0XlkIQiGOBOBAsKZF9B//bxcIK7QHVXJnCStXILRdyABaAVU4rXkQ59mVOpAQF2hnyfn5MpfC29AeW7Pl1AMvbYG0Vt4vriBBXJdtlubiVoYK1UiZFYnCrRNZ6cYX+rjkW+gAsF4MlrYQ5xFo4z55GtVdvW7J9D1mhALC8DtZycXtWVuNfuuAlBeAz8xIky6U2ObPzc1JS1Xy2ml1V/sPccm55FgFWZqVYlH4+V+qeI700k10u/0Lx8vlcbrn0xHUJ3PkyulkpgrZU+X3pX85LgY/5KtNz83MAllvB2pIWrq1dSzNbyfksZGStAQqZbLG6uK0Ud7KZbOU1KwiwZst/LJT+I/1xbqdklRQvX9yuFH7fvdUj/WhpZ//30r+UgMstVRuGZSm9B2CGHQxWCYDSGlY2SSUU1kvxUil0Wv7TbBksyWvaLr94R3LGspJPtlwyODktWBKhhSpY0k+lFxZKL99Znl+pvEYiZnslt7I9N5uTcMtJsf7SklhYXHxYLLt5Bcnd2yksZXcqTt9y2QACWK4Ea7nEzO5aKEEwt4/LfMUXKpQdrtLPF0v/y5WsVunnOwiwCnKwyh0pqi9fLv1Pepv1rNLHmq0QlVkvv92++79TGc5D8LHcCtZWeRGqTOGi3GGXg5Wp7BvXSzvE7QqD2f3X4sAqHzduVxuelF4uGb6synlfqdrKipEqVE3UXBn0WVp7J5hh54I1W/bRSytbtjTZ2xk0WBX7tCNN9Gx5icyVlsplCli5qkUqv3xH+uuOzDGrglUoVk+7y9AWdgdQBn2ZFLgFsJwNVk7e+21vljVgzZZiqIsl+ua1Tb1kYO3sOe/VnypeLg/E7oGVk/19bwBLpbfaosXDYIadC9Z2sVA2KNslE/EQC5Y05euSUVkvk7Ika9mrBGuxjI4KrOW9Dr7yPmB7YK3v/n27tDBWByCtjMuz1GbSMMOOBWtu14iUfZ2c/PhGCdaS5HyXfzKrPf/ZAyu7XV7K5GBl5X6SPMJfBevh/uJX2HuzyspIj/nDDDsWrJVdN6bsLs8po1OLMrBKkYYKA9vFAgYsKbJQhlEOlgTMPh7rMhtUBWupyu982ZrtgyUNZZva5xBm2LFg7duQ7YrzXFwph87LYDzMZvfnen23oaWEwsPS1m1+XgnW/MpO1TopwFqsvrz0zNmdYil/MLuULf98OZMtGbkd6TfzO+UN4z5YmVLGRBbAcilYc/vrWjkYma0Wi3lYJakctirsvrQ60etVZ3xdk92wvZjRgKV4eTXKXnrT7E45wl+OyW5L8fjtuYwCrKVikZr+ADPsVLCWCoX9m2CF0nSX61xtlUxTViJCCpcu7eZjPdzLslosH9I83HO1CiVGdgoruz9YKZQMV6FQda5KYfVSeL38LuvSa3celozd/FYFnfKPtiv1HZb2k78Wqa47gOXoAKlTpVCkX+eAGQaw9MoyS9YOzLC1Uh8KhdoikcSwa7EqLcMMyYJDiUikTfqwMOVVaQhFehOJF8LFtWBtF4ss9xrFazCR6ImEGlwBVSiSSL+wSFwL1voO03UMq/SYHuhqdvYa1TFgGVSuBmuW7WVW6jLd2+ZUrNp6X1gsXr9XaLE6070O9Obqu4ZfvACwXA2WJMMd9c7CKpJ+8QLAcj9YktmK1Nc6VgCWx9HqsgkrAEvYgugEP7556MULAMtbYEnxLdtjW5EXLwAs74H1It1Vs+YKwPKu0eogelfpBF6GXwwnjMtAJBLpCoXqvQ6WdCgqfdLIgAlVkRVNNlq2RbV68UhF2qw4I/A6WFacwLVF8HhF7AkyYAY0FLHs3AnA4kRXD8al6bWDK+RYhiNWrswAFj9vuQd5cjJkeUirGTWOhMXxDwCLq8eccABZzQi3PWG5szc2PjFx2ptMnZ6YGB+zPOUpYTdZDVquhvRgJSVtRThYt8mKXJiePjs2dm5i4pS7YTpZgmns7PT0heoH45BxIilaz8S0DdtKlta/0hVPq7r9iXpOYMnl/PT09NhYyZRNuAAlaZTnpNGOSoNGfBbTYBlRdMRGsrRc6Qum7f7zIQFgKWVKmrEz0syNSTM4cdIBFmli4sOxslFCk8QZLEOK1ga9LdsbauJX+sL/HQb/nQGw0KhNT4+Oje3ixpu4U9WHnqu8RZmhvbVNp5jNDthTdIeuf9ejnt8ei7IZTEZoB/YNnfVgUeT8tCGZmhQiJtWz74oPmDxR6bCCq5B6CW4w/HmdB5azhBtYehWt3vSnLYh516fNunYAluPB0rjRQ+LBGjC9Zejh5hUCWIy+sH4nSU2WcDerzfxWdD8I1gBgiQSrYW8lM6BoNVkhSxdCYyGODl4uIYAlUNH1w1Yuhsqd6LDB0FlzaT0dMO8QAlgiFa3y4IXm0DRbvlcAsOwTpduTFhmAT1gf3QCw7JOIVQH4kO1ZYEr5mbe5+pntClYakgZr3mfY/muNP/E2WD+xXcHKLJZeawyWAwpI/Km3wfpT+zXcZYnJUsRGB8w8qVm6e8LB8/+Rt8H6EYfdlllFJywwWQ2KPYIJeusrhA7Uw1oodiWs5mOZUXTIgo1hD6+oRoJbzO2PvQzWH5tWzxCHM9le8XGANCd2OziO8y+8y9WPTSuHi6IbhIff23gZLH75WD7fBz/1Klc//YDjJn6Al8kS4b5ze4MER7B8P/JoLOtnHDx3PopuFp3kkOa1PeAKlu9HnrRZP+XAFS9FJ8SuhSFuMawevtvXD/7ce1z9+Qd81xhThqZD7Foo3xMOcwpbcBrlH/3YY277H/HRSzMfRdcbvzejZ+vKYaXt4L55/eBPfvwTTzhbP/vJj//kA25q4aToAV5xcSq2ZoPm5avcQy5pEdOMKpbhji4hvtAQj9IH8rUwLdLF4vFwl8yMD1MFLOKa4ddzNiq8Jy4i0hw6emKQVQuHa0kFCjeId0GhAaEOnIMFU723o5Z00CPQVg85K2HGOsF0cknUkg7aBH5wuVJrSacduPqctfTtahAXIq3n+OiWw93HSnLkcItrDZYrTFbL4SNlRXebVrQ4sxLipdJD/Xm59B9y9tx04atVO9xkcVW03BGqFwaWcfetrnskr5aR7jq3bQmdvzHkreiEsC9UFw+wDmo/bfkTO9dqERu6OHdzfAij6IM8toUhYRo2qNC6/jxOjjnUaDWQOzfUO9RcHcMqur/O/PSLA8vYk5tO5PEy0uTIKSK3BHFooLhphKDoE01eA4v4cR1KVhetj1HIbVwZVXREmAdgFizKx3UkWQ3UBp/D9W7jyqCiI8JC7ybBqqN9XCeSxdAyb8B1XEmKrvMQWMfzdDnuph2hU48MBSnaqWB151mk21FT1MbWiLTZUYMWpWiHgnVAbZ/XNp8+fbq5pv7ABxw0Rc2MHdQd5WYdyKMU/Uit6JEDHgHrqPJzbb4pVuTdpiqc5ZwpUlXglP9tKG11PWFmUQWwNt9VFf1Gpeij3gBL+T26v4tVGa37DjVZKse9WdE7z/5mkUyKfidT9BtzinYmWEcU36L3RYVsmvomiZJedSKy4gy+16FkKVaGTaWe3z+S//KIJ8CSh9zvF9WyIV/8ncnVkE8JlqqesGMODeWu7IZG0XKbdcILYDXJPtDqe83nfb8q+/1BJ3JVqtikzBpqdmTQ4SBZ0e/kim7yAFjyLfDTolaeOy3ioL6WU7o+oEpH63JiooPc5XiOUPRT44p2JFj9xO+RJGvO2hf2om56qfMce184z8+S7QnXUHqWrw39HgDrBNahrMpjJzlZmiaflVMbNVialzmALJmL9Rip6E3DTpYjwaIY6GLxpewVtsdFh9B9azWZ2Zrc0iHbI6UyNb5EKvq5YUU7HazXyM/7WvYKmzP+2tKYZD5tyr8mNG/36c4BXYquBbCKslfYe28ngj0KRNwlaXZYrnKLTI1FAKvkVDoErIYh/BEz6pKS9srhQL1DwHoPYJn6vFylK01IXUDeftOSlW6z8QPU8FL4jLNPydNrTxBTYtDXKhHXpAcanAAWepf0zIFg/dmDB//yP0vyrw8e6ARLlnv2iPMumF+QoYeSaoW5r4sgKx2xaz2kxnUeGQ4YRh48+Nfy9P/Lgwd/xmu8gfZoPKOQVDzaGmD+9/Kj0XcUF6vfnimJpGkpfLiL4CHEvxy26YSnn+JkvTN03B9ojcZTyvmPR9sDZgfbGk1m0DIYbWR7xOE8+ZskP2k4bMeEdKDqMwwplzRshQFkQqA9aB2mnJ1t6ld0Y3QQM/3JaKsJWxVNZUiSDLOAq8gS0nqVb/LGz0Z5LIIRZKpoQrWe4UtX1CPvXAx3WL8gyk/782+IrjtTQlYgnCROfypqzG4F4xm6xIK6nKz8qvoDv1/L2+hihXrRCcea6r2Emij16Gekey0PmMrzk9bUi+GbVX33KYIxhumPB8VgxfZsuYlWk6XMbLQ2uaEhgqlRlNauZMRiO7iLrUNd1m4Ru7GZuiqu8ocsnH6lFWR9btlqUSyi8lLhqjzm8GzV7I03w7aqB1v5aghhashVnJrxz4pYaLe4KToQ0zH9cfYF0R/O6JJUp45vkmSln1U2h++erdly/6s+FCEVZUAWsaeUB8MshxX7NxAJ1dtgsowrujOlb/7DfsatwGBGr5CprdPUA1nd2NhY5XFFVx9QobZIT4J8r2sYHaWj1p1rozw20RNpC4UsNVlYRZ+o47ZaVSMETAGCzowBSRE3nweZ7lHqyUtuCEUiiQTDJXidgotu0gsaomKsJiWRSES6dFk7DopuTRmZ/076MhjLGJMo6alHGD4uc8xOWsnSL4RIAutss1TKDA2JGdXwQBezo3aUQdHEKzpRg9MfoyyH/sGMUenzM4YcMBUFmBbC+o6BF6JkmLBSsZVg7RgWNbZ0L1tgrI5B0aTp7zM8/YN+zu4V26OpH5iJK4FUUaLlrLV9I2lxI+xt40EWSdF+U9NPcLQaU5mMPWQxcNXQk7YLK3awpEj+sMBRMhxwm1C0Ka4kPxtLVsAcVxSySMs/vTZmQ6+4+ZJuzdPeXk818o4hgUPtpcZcCbVeJUdWHFcSWX5BD5bIIkbgcUXBRg7biVW6lyE+rq/MfahX5IpItVqH84YUzWH6/YIeLG0OiMfRaKN1jHYiKmAnv5+Yx5aIoLd/gshNRpqaancAXTf5KFHRMQ7TP6j/wZf/dmHh78YkmThpIqDRpEXrKDXNvSNt81bLAFgVtkQNfJgaaW1BKLrJRPjyoysLCwv/VZr+cyf1GpZ2/KsvffHbfy4N7atKe9mpMx+ewr+YEoStO9S/vyKO9B+mO1cJMVAldJ3iGez4Qj48MmNoqd+IusMKRR+iKDpImP5f3LhbfsonlfmfJk1/O7vjfvXb3eF9td+7eHocm6RFPzg6ILVp6pY6B7FkX7WlBTDV06H3aNhEK6Hmjh4BAd1hluOhpqqi6dlXfmzq1ae/3cPzk73pv4Cd/pT6cA93QPQPf9g3pl/J22KfHzcSgtd7vNdLY0SPDESkExJj53Wme1SFQl2RyICu4VJo5HqpAecHXb0tW0w/kU3/1Ie4Y2OmFfaK/LlKsCRsMcttkB9XQ4SVrM3K8v329JOrD3UQ1lKOtxgxC+HlbxVe2ieK6T8/weBl+5EL4cyvle6fCqzJyTH0Ysjr4+IKzCa6LE/OtLNRYSgyxJ44ZkzQC+GCyv3/RDX9Z09To1lIS/jRrTwFrMnp08aOupkE7V4NddlxvcrmDpgNXcMii4Ej8+9mbuYpYE1eOEXZGQaQdvBungoWejlM+Xl8WmTT3F6bKm/Y31o1NCCMLOR6pTErCLAmp5DeUIBosLRcocBCPzosiKte264ZO6FnL+r4gQtZYbbpR4CFnv4YyWChHowCa3LqtBCT5azb644Ai1oHgKPBmkFMPwosNFm7JivK+GAkWJMXTjOEyXT7V8YCNx4HC+V3micLERqfuZVnBAtpWHYjTghiv80zgzU5qvMw2tB+sMeEyx7qTSR6GpwBVkNPItFr4jtSr3G10mYNOeKM+FqeGazJC4gVC0vsQl4HWJPndB/s0LSnqZZnxlz1cqiZzQusDvMVS9s4F6ls1M7eZ3kdYKGCTpUVS5uOejmvCyyENTQXfh/iqboeHv1QOYEVIt4xYzXnQ1y7JkbZ/CA8WJNaN6uv7LtpgbuJeOqjp6//48mT7+98zrQYmgqS9vCsSNzApZ0SJ7D2o1Fm1i/NcmiqRmWSaSG8//Tl6//75Mmd3yCmf1pLkB+5El7RPHb16X4pgFd3LmoefYrnWtjG9VBMtr1ssBusBl7NLNSBBxMOvHYlvISY/v36U28R0z+BXAtjdIOl6qz06ku6yTIeylI7WCZLAkW49AbnA1aI2xFyL7euiWG6wXqkLGv29jrdZMVQplDjYWkLD95RP/o05ZBbhyT49qnp4vK95gNWM78Ky70MdQGYRJPWMqOefm2trXtULyuJio5eo3KlfbQ2iYLTQmg6OWR/+Rn2io+FIsuwNdZM3BcGpn8UMf2tmp+p9gToirTXacEMg06WaiHk0ElkgIft4wRWB5+NHMKyG92ZaF0sVWwUXc70O1VcAAFWmOK6b6CL0Rc/prjvBoPvEe59cXeTukwxyiuO1cuvP4qqa6LBtbWd4rqvYab/S4r7johiqYKj7zBPfqJ88jgf770B2XDEpHQkpFpC5k6EuEXeQ9INiwSfEqXK4wmDutLYlavK6cc0Eym+ogRJEc7bTQZLWBJlQOssMkZm0nOw9XhQDFg8pYuDN6qxK8rkzvvY6b9O3hciDgqVLtZL7JPvkZ8cN2+wenwAFpv7aNxkUezKc+z0f092shC7AmVoDPtglTGc4nIO3cspOFMjYDWkTZusQbJdeYeff2WclA7WZSbXXeu+84g3NDh0IXQqWMrFMM0l2sDkumvd95NUsJSbwsfMT+YBlmJL6KQJdCpYvmGzsWQyWCS78jvitlAbH71CibqKBEth2fnlizZEEgMmr2BwA6u+ayAR4ffRQmaDM8bBuuMesNrENFnu4dDxjVs+VprztiRh8ixaGFg+B4E1IMRgRZyYjxURYrJ63AMW6cmfcwarnl/yGvKpCfvBSnAO/fqUSZHDvMG6z2xXJviFG95OEsHSH27oELIl9GQ+Fk5r+tfCQeL0Y3oAGwo3qAIZb6wLkA6Y++7Rd5oeyseSWeS0qbXQcID0B1qAlPLkx4ymcNT8kU5aSEN4j+ZjoYPK+veFfeSkqQ3jRzpx8mHR6nsmYjkcQjeLiTU0mwsg8vWx0jwgJ+2ldbtutENo3Ir19iLtEDpMufuzyZY3YT5tpotzuozGYY7YD1ZERJRVbul1x1RoaTMbTAZLewMQdZdClej3kiXT67z5KlkDgo6fvZqPhVwLdStOWxnrNkue5/f0RD9qavLqG/qDEZcWTZ1OcD0mLNf0HzK3DeMWeS8VgR/m2+i+w9TgMmRXCG1YfrhIT03W5s2ob38hyLp3kXb/S/emUBHF8jlNnHpWqApiGNBcnHb7a/U5lSttAmkKtS9QG0OtOdRc0jlj/ip0yMlz52iwFE6W7l2P9iL0Ddo1ne/U038eeRVa62Rd1dxY3JBnqN77mOHGom4Xq8uZGX5uACthxokIMtxXXpMbrSeaW6XakEB564aojnVbe8V67fHrUtLXq+9/9zHLHeuUmUAmxyBPTYBlTnUplgoLa49flqf/CWr6z2MqZA0yMEssCoK4YR8zFXcPAVhGjb3+mEqM4Y49uSjIBKaMFaKM0T/pAgtRx6bVlD3nXGi0QSqx3uGUfKwOqdg859KEIVNeRCtrFSscWGdxZYwQ5WZmbusA6wKXitwJYZvCDg6V73iBVb2y1SEMLAOjSzLW3cOAdf40utgM0hgiS5BiwELVCjRwqXBYFFgdPGoqcgJr7yogX7LMjS7MWCkUUyryJL66bSOq1wUrWKgHGyluKyqMtX/67818LPOjQxW3vcxa3HZynNSoK85GFnM57pg55QyLMFhGTmh5g1Vv4lBP4OgYq7EjwRonttNBtlK5ygIWrYK8/fsur+djcRgdY/8IFFjjlGZKfajf//wuFazzSK7CPmeC5c18LA6jQ7Y8uXybCtYUsk9TH43ZzKVvKWCdoXfpsR0sz+djcRgdpkfXDQpY6FY6yvUqjG4R9qu7BLCmzjE22bQ3BOn5fCwOo8O01/30LgGsKXTvN9V6heuw+ZfXsGCNnWbqhGg7WA3DDsrHqp4vDDc4CyxcH9SZhX/GgTV6iq3DLrYn8KWv7yLAmsJhpe3davuhSX1vupQD5YzIeyk3LN3LudyJ+dFhOzfPLPwBAdbU6CnmnuBhbP/o059e+4MCrPOj53R0m7YdLGdMncNHR+g1/9m12wqwpkbH8S8OM1vDave6Txf+6eY/Tk9Pj46dO0V6YQymzp2ji5Fm9dJnC1/fvPk309NnxsZPkl6I8oP8gxnzMghT59bRcZl+ZECgMSXowTB1bhgdB8OSwpTKNk1WqhGmzr2jEzj9Jh9thithU9d0qPtYSfq7Dx6we3QHDnb3lwfTfajJgdgLnH5TjzbFlRiwWo6OyCN8J7oP2De6A0dOyMcycrTFcfZU4PSbePRgwOcwsA4d157Q97fYM7qWfu1Yjh9y2kIdGBRmVgw/Ou73OQuspmPoBNujddaPru4oeizHmpwFls8fF2ZW/DFDDw47RzkV6c7jZOSg1aM7OIIdTLfTthZhQ9MfYzEr7fqXw1TQ5yyw6vrzBOm2dnTdpLH01zkLLF/QwPQzHrcE4iJ4tVI5dcfzRDlq5eiOksdyvM5hX0rda1ac3btuTep4bjLoNHNO40o/WSZGd5Q2FvNk8XYjgnoc7aSuq37+MKtBTLb7fE4Dqz9PlcNWje4wfSz9zgvftrNallRY72rlDyctxIqrcrrzDNJkzeiaWMbS7TiwGNFKhg05Qe00X6uv1edzHlhMc5k/UWfF6OpO5PlTbk1w2dfaR/OtjFuVQCd+te1r9/t8TgRLHb9affRUkg1TZsLo6DTGc6M0lker6niWE8GSVq12PFuDnQGTD2+NagxXKh5u9XEWbsppUc3kbkW698/XlOGsOvGjqxtRlQPaLRX8UsV5iyPBKtutcFzjbsejrZyMSiDYGQ5H4/F4OBxuDwZ8AkRSyr8/kOT/mVWOwmCtKgodPjVssgxOXTe+gNnLVX4mi5vucMYl2C5NvDT90XC4U8z0+8SMOxyL//X+F+I/xWPhoNGvRBOpyuVzhckSD9YIoRj/m1UeXlZZd/+Fk+68JP72GGb7MWjM3h4hVk9VkHVQNFgHiU0eFGQd4a27GqeKsvEwsEE4QS74+8hYlNQYWPLY6CPtWOSUnxCgu1rFKshydJCK6cvyOkApfv9+1dBkGgPrBKXDh9yDPyBCd4EaxKqV+UAyrufI6BCt9cFj2QvqxIJ1gNaT6KXsBXpys9oHhejOE9ZKV9qXDvV001rivTG0yTcEVgu1J82qkT2qroPc2kJLd/pEpo/VqPdT28AYshKGwJIfE6LHsqH/wLBRnO5cL0ZyyVKMmYTHqG2HN4xYCUNgdVMhf6o3kuWPGtFdZ01g1Wgw+XmwEcAKJg3qrgaMVqfxdP32WgcrLFZ3ro5c9WVMCEOm6jFqc9g1O8BaQ4/lsR6wDF90MFdUwx1eu8lr3PQr/EdoLdjfGwq9GwLrILVr930dofdG4bpzsXtlujpEspHdSqAn86U94YaXNMi7hevOu44Wh6oj1HuRLXmKkyWPdouOvNNa4D5lh9wK3dUyV1Tt1FEapb+W32IQDZb8Tsdr8vES5RQgmLFAdzXNFVU7x4mN0t/fN5ZRYAwseabFfS3lm8yQW6S7muaKVu77MDFVZdNgDpQxsBS5YZvEFJ7D1ujOex48l3qBLNo5QGg6/F7BlY6V0Giin+J+46bSZj1TDJS0EvqTHHXnNbDoMZifX/nVwj+MjX04cdJcTEZ5QfTRO5l/dV/xq0PiwTqkeMP7Mj/r3SP2C7T07+SVKwsLC39nXnfuE3LMeObTr2+V9ftNteXB2XOnif+gk9lkSYbiZfUuher+gq7UOqPXFVS3vzaqtylebqoGScrGIh8Pzly9dkteLV3SHZksT8XgiZuaz/Zba3wjK1BP1E8jo8tcjXtvbKxqfnjQCrAOat52dWNjTfND0jailaSHqzcQ/R2mRidqxIEnOQlX5b2AvlF0gBo35iqwXRLVd6/d8AWrfpaxkC7P+vGO+8zCbVxHGqO6c5lE2bBSgSWp55yhelxNJueSJ1hMlJO2p/jD1at3ST20zk+Iq2Xm+IXw0k2Vhr9h6y9GWwwPUadyROd1K+NXQptGqIM5ZER3l2/S2knideeVs51Bxq8cAixsizFyL6gjtLnUW9TPxF3jg7SxEOO0SWbdabv+TU0Y0Z17BNem5ZpWx98gmsNiupdliDfnyAVnRnTfaDdzib1lxHipmU523aEa4OJ05408ePSXTtNmEQfW5Cgm0YEcQSLM5gn9145NVUdoIvhZI8RoGsZzn7mVZ+wFP+phk9WuQzdIsHDaIQdkmo7zrPppruwGviLq8SYD4T+07pBg4XQX9KzBuplnBwujnSTljQ8jjdYJQ4VdzNZzaUEarRFaXcGUDq7QYGF0F/eqwbqW1wPW5FlDX7u67hO8avabLxSk7WZworuOp+4wYGH8LPebLOQh4S/y+sCaRO4N+xi2ZEdk83nMcMcTLhWomrplCfnHjzBsTJHb6S/y+sBC6871R4YBZAwmrxesqVPG4zEtLd3d3YdbTJVj5FXarKnlsDSYFrbluFGX7rBgTSHjWW7Pn0EG3W/pBmtyWu9ZNF+xpa0csvDHbd1gTZ7x4lk0ynVfwKlm439/+TlOO+O2nnrZAlZKl+42/tfnehwJl58Yoqz5zF2kYp5XM6d++A6poPOn7TybsAMs1GnOJaTuHtF05721MMz4pdt8J0+u/OFLxt1Np5fBijLuCJW6e/Ilo7l391oYZzJYa5orLN9fZPra9XkZLMSecCbPT3fu3hcybZcRF1iKrz5n+dqlPAyWn8nYM+runP74sqMlyLKtuY+8sfz2c5aNYaN3wWpl0d0Go+7OeCx5JswQh1lDlzUovtVY9FP2OQo2gMWiu/sY3b3S6O60zvQQh0sfgzVHF1EsuaEMa2HUu2Ah3NNfM+vuewbduTmRNE4/fX5cxMp1uj2PexesJD2w/BSvu9/Qz6LdfBCNWNnVl1be45XzSn02YZ8HagNY9D2hHt2d91aIFHG1Uh2EKRbZv3YIJ8uzYAXountM0t2XdCfLU5vCqyrlvCYp555KORO2xY+tBytID9S8Mak7T4Gl9t1Juim+pQffgzUElkp3q0TdvaJ7741eAku1sdkgKqf4ce2ChUjyu6FLdxedojtrYnyqTeEjsnK+rF2wwlTdPXaJ7mxRzlNdyjkLYBnWHYBFUM4ogAVglaTTM+YcwHK6867PAa1hsOhfSoruPq8tsFRb5jWyciDc4AHd2RPke0fSzRN6VlGgdsEi6+57LwdIGY4lnpGU8zuVck7W0JFO0KTurjvmOEyE0A9SSfZck5GVsUU5/mBn+Je//PvK+/39L/9zuDPot0V3l0zozsYDfBGSpCdBPscr5w49hVR06kegsw9ZeyIZaxe9CKfcrjuREqffM1l7z2ywxiy+EdAYJRZYH+wMOFZ3mhTSD+1LkrQoGPNZnjVxRnOP6aSVWZD+Toay/YPt4hbFKD01xJzu3NzQF3UhQHP76xmb94m8wyRqxxyIMXYZSYVFodXOcnPuuQndubksd4DpzuUzJt0gb6yKwkpPax9BaDUy6e45m+4+zHhqU4j03i8h7vJqfIW3v9Fe5z1lUXatX2/r5ZSYBTnFVGqGSXeogjPurr0WYyvmt6ZqQHrvIltpOhEz2mqg1VYyaKPuXhvTXaerwUI5WVdQdS3uP9/75r397mNUZYtTlrgJRruhR/mvh+2sutvY190rO3VnqaTYax3e33z6b3fuXP+cvVok/xBf0HBnwCT3iULdsc/cwOju8dOn/weru7GMt8KjOHuOrsVDLryGLEvHPRITzpgQ7rey+3TpDl947bwlunPAWogvo4kH61xGvDU3ugyKita269IdHqwJT7Y9Seow6HiwzmbEW3PzTWDjnB2tFHshcwJYZ73ZAiysp1Q5DqwLFqw9AQ7NhTm3XEYWcJ25rQ+sC9as25aLH9276q4esJBOAqXpuO54JJeG3nzJCujRHQasC6czHnTdce47TjtosKZOim+7x6uhN1+y9OgODRa6jrknWhYGMuza+UYHV1wNln8ww0kG7dIdEqwLFujONolitHOLDawLmH6OXL903LjivDfEHFpevs0GliW6s8/LwngviMZyCLBGMbpJ+sXPn1z+8sqVv5qYmDhNfyXPs5IATnc3WcDC6s7nDcF1c8x8cZcG1tS4FeHIdjIpl35x7dv9mbswOn6K/HqeB4fYkO0CFSxsc1pXF4lkW2gu/ZYM1ijWQPA8myduCC/96vfambvwIYktrh4MdlOhaaj9Favu+rzCFbrbUPVU9SYerGl8I/ZUwArupeHdwM3cKAEtnjMXZNWdcnhW6c6JUdJd9VxDgjU1etIiPwY/uI9uEk0CHi2ea000o5t7su7afR6SOMknmbl6464SrKkz40QvmadJCGCH9WuadzxmyWI4yKa73eFNjZJ1F/MSV9id4f4G+urCjZs3//v09PSZsfGTtBQVvwXMX/49fdt1AWe0ohbsDFW6u/mPTLob9HsKLJKbpVtSPLMacD7MVaZAEXbnFbBgiLbrzhHSzk85XHfLmF3X16xnJuPid608dRf0eU46eemm3YI5u8Z+yjtuwQxGHak7p0jMibpJsnOFy0sZtyBYFAOuRGuHr27Q7ssX+jLpxoV7WY7UnUvCWfboBpmM/Ld628SfFL0x5EOWZ7ky74WmOOsGGcOaucvltkLKabpr9XlYgqbyNLnvlTu5JJVj0sp5G4hWU7pLNvo8LWYyy+PcY3uowXym/xoM+iIM97PeRkfpznFieOvMPzstwHxXYXXzZbkl0g/3rl9EgYVqKyyggZRh3XX6akCChtLLBwWY8k6mPCepPIK8psvbex8z7gxbvaw7Z+4OdXsLKSFfOdQxodZzX1WXWXp7B+G/W3Tc69e/s051+mpGAjo3zzExHgLTEeEqoi3gk4ssXlbSEbqL+n21JHrUExOUmYaKjt5iaxT/w0WWSkGixu0A3TkaLaYFMRUVphqEi3WJxV6VydKYrNMW5paz6i5ce1iV/YX2OE01fSKjxTGGw5yXuPKx3zGULQmL1N2grbpzvNlq78N+91J97WLdgzg9OPqIvZv3qNW3FqQa9BnbdOeK8ENnTPPti8c6xW+REROSZ29X84S+L4xboLs+e3TnHtMVDIarEgxa5BkgknxZ66gj+rahnCyrdNdque5AdG0Kr7J6WCgvy1P9tUC4gqUOuxMbAr6iB99hSQKwyvJrXT1ML3q41SSIcWmnbgo3a7frMohxgXbeIAAWCIAFYNW4tFLB2gCwQESEG+6TwZoEsECMxbHek7j6gX4KDWHwWpRG+kWK5ySwfgeRdxCk0NOxiE6WOvVd/NVCEHdIip7x/hrP1T16a5E46LgmBZGPpa4Qjnff335Mv7QaAx3XpEQZ7lJgQ1nXGW5ThEHHNSmIw8KZPGNu8j1NZZAMRBtAsNtCbSfF1ddMXCHLN0B2MHjvewWutfegETGHO0z9vAdBwzUqqMsIiNINj1SZ7z98qeXqjPgKWSBudrJQ1ZKlxCzZ7cIn11nLzYCLVaviZy+Ptfb42ev/ePLku+sfI8sYjWYgPApCXgsvG6iPhexjClEsWAtJie8sYH2YgZUQRL4WIq9h39ILFrLsWhLUW8OCrNvy0V19YCFr22Y6Qbs1LOjWX1d0gYWuxp2C6Ci472wxBwxYaK7Ada9xCWbYyfpKB1eQPFrrginR9dldNrBwXEVBs+BlMfbBRIGF64QJHhYIrnb6zP+gg3W2puuqgxiIZZWbNd0mg3UB2yke8hpAkBdXq3J64S4erPPj+PKfUL4IBBtyqKyHv7iNBuvCuKXNWUBcuRgS+4j8/OvbarDOnyX2ioeFEKQijZTC1h9d/W83f18B68L02PgpSnV1CGGBVIVjm3jIagBhiDlAg1wQcxLjxRWcEYKwbg2BKxATW8M4cAXi1NUQuAIRQRacEIIgpdMUVinYD4JgJJgyzlUSDghBBLjwfZCBBUJcDg0ZrVQraA6ELAEDEa0YmCsQBk8rqQ+rOJwOgrBJexKwAhGDFqMX3wdYgeiTxijVjU9GIfUKxIC0xpIkqiBwBWJ8j9geG0QkH8fawVaBmF8Vg+FwNF6WcLgzCJYKBAQEBAQEhCL/H73GuOKzAk48AAAAAElFTkSuQmCC"
     $iconBytes = [Convert]::FromBase64String($iconBase64)
     $stream = [System.IO.MemoryStream]::new($iconBytes, 0, $iconBytes.Length)
-    
+
     #functionable variables
     $NewNode = get-Item function:NewNode
     $FillDetails = get-Item Function:Fill-Details
     $IsDNFormat = get-Item Function:IsDNFormat
     $GetDomainDNSfromDN = get-Item Function:Get-DomainDNSfromDN
-    
+
     #$objConnectionForm = ConnectionDialog
     $objADForm = new-object Windows.Forms.Form
     $objADForm.ClientSize = new-object Drawing.Size -a $formWidth, $formHeight
@@ -615,8 +615,8 @@ if ($Mode -eq "SelectADPrincipals") {
 
 #region AdBrowserLabel (display browser mode)
     $objAdBrowserLabel = new-object System.Windows.Forms.Label
-    $objAdBrowserLabel.Location = new-object System.Drawing.Point(10,10) 
-    $objAdBrowserLabel.size = new-object System.Drawing.Size(($formWidth-30),30) 
+    $objAdBrowserLabel.Location = new-object System.Drawing.Point(10,10)
+    $objAdBrowserLabel.size = new-object System.Drawing.Size(($formWidth-30),30)
     if ($Mode -eq "SelectADPrincipals") {
         $objAdBrowserLabel.Text = "Select AD principal to be delegated"
     } elseif ($Mode -eq "SelectDelegationObject") {
@@ -634,8 +634,8 @@ if ($Mode -eq "SelectADPrincipals") {
 
 #region InputLabel1 (domains)
     $objDomainSelectLabel = new-object System.Windows.Forms.Label
-    $objDomainSelectLabel.Location = new-object System.Drawing.Point(10,60) 
-    $objDomainSelectLabel.size = new-object System.Drawing.Size(170,30) 
+    $objDomainSelectLabel.Location = new-object System.Drawing.Point(10,60)
+    $objDomainSelectLabel.size = new-object System.Drawing.Size(170,30)
     $objDomainSelectLabel.Font = $FontStdt
     $objDomainSelectLabel.Text = "Select Domain:"
     $objDomainSelectLabel.AutoSize = $true
@@ -655,7 +655,7 @@ if ($Mode -eq "SelectADPrincipals") {
     #load domain list - initial list will not change until tools is restarted
     $Domains = (Get-ADForest).Domains
     $RootDomain = (Get-ADForest).RootDomain
-    
+
     #do we have multi domain forest and EnableMultiDomainSupport=true ?
     if (($Domains.count -gt 1) -and $global:config.EnableMultiDomainSupport) {
         Foreach ($Domain in $Domains) {
@@ -663,13 +663,13 @@ if ($Mode -eq "SelectADPrincipals") {
             if ($Domain -eq $RootDomain) {
                 $DomainDefaultSelection = ($objDomainComboBox.Items.Count) - 1
             }
-            $InitialDomain = $RootDomain 
+            $InitialDomain = $RootDomain
         }
     } else {
         #do we have single domain forest? - here we don't care about EnableMultiDomainSupport
         if ($Domains.count -eq 1) {
             [void]$objDomainComboBox.Items.Add($RootDomain)
-            $InitialDomain = $RootDomain 
+            $InitialDomain = $RootDomain
         } else {
             #last - we have multi domain forest but EnableMultiDomainSupport=false
             #means we need to tackle only local domain
@@ -683,8 +683,8 @@ if ($Mode -eq "SelectADPrincipals") {
 
 #region DelegationLabel1 (Delegation)
     $objDelegationLabel = new-object System.Windows.Forms.Label
-    $objDelegationLabel.Location = new-object System.Drawing.Point(10,($formHeight-150)) 
-    $objDelegationLabel.size = new-object System.Drawing.Size(170,30) 
+    $objDelegationLabel.Location = new-object System.Drawing.Point(10,($formHeight-150))
+    $objDelegationLabel.size = new-object System.Drawing.Size(170,30)
     $objDelegationLabel.Font = $FontStdt
     $objDelegationLabel.Text = "Selected Delegation Object:"
     $objDelegationLabel.AutoSize = $true
@@ -696,9 +696,9 @@ if ($Mode -eq "SelectADPrincipals") {
     $objDelegationSelectTextBox = New-Object System.Windows.Forms.TextBox
     $objDelegationSelectTextBox.Location = New-Object System.Drawing.Point(10,($formHeight-120))
     $objDelegationSelectTextBox.Size = New-Object System.Drawing.Size(($formWidth-30),40)
-    $objDelegationSelectTextBox.ReadOnly = $true 
+    $objDelegationSelectTextBox.ReadOnly = $true
     $objDelegationSelectTextBox.Multiline = $true
-    $objDelegationSelectTextBox.AcceptsReturn = $true 
+    $objDelegationSelectTextBox.AcceptsReturn = $true
     $objDelegationSelectTextBox.WordWrap = $false
     $objDelegationSelectTextBox.Scrollbars = "Horizontal"
     $objDelegationSelectTextBox.ForeColor = $FailureFontColor
@@ -712,8 +712,8 @@ if ($Mode -eq "SelectADPrincipals") {
 
 #region AdPrincipalsSelectLabel
     $objAdPrincipalsSelectLabel = new-object System.Windows.Forms.Label
-    $objAdPrincipalsSelectLabel.Location = new-object System.Drawing.Point(10,($formHeight-120)) 
-    $objAdPrincipalsSelectLabel.size = new-object System.Drawing.Size(($formWidth-30),30) 
+    $objAdPrincipalsSelectLabel.Location = new-object System.Drawing.Point(10,($formHeight-120))
+    $objAdPrincipalsSelectLabel.size = new-object System.Drawing.Size(($formWidth-30),30)
     $objAdPrincipalsSelectLabel.Text = ""
     $objAdPrincipalsSelectLabel.Font = $FontItalic
     $objAdPrincipalsSelectLabel.ForeColor = $FailureFontColor
@@ -732,9 +732,9 @@ if ($Mode -eq "SelectADPrincipals") {
     #$objDetailsTextBox.Location = New-Object System.Drawing.Point(10,($height-120))
     #$objDetailsTextBox.Size = New-Object System.Drawing.Size(($width-200),80)
     $objDetailsTextBox.Dock = [Windows.Forms.DockStyle]::Fill
-    $objDetailsTextBox.ReadOnly = $true 
+    $objDetailsTextBox.ReadOnly = $true
     $objDetailsTextBox.Multiline = $true
-    $objDetailsTextBox.AcceptsReturn = $true 
+    $objDetailsTextBox.AcceptsReturn = $true
     $objDetailsTextBox.WordWrap = $false
     $objDetailsTextBox.Scrollbars = "Horizontal"
     $objDetailsTextBox.Font = $FontStdt
@@ -744,7 +744,7 @@ if ($Mode -eq "SelectADPrincipals") {
 #region splitterContainer
     $objSplitContainer = new-object Windows.Forms.SplitContainer
     $objSplitContainer.Location  = New-Object System.Drawing.Point(10,130)
-    $objSplitContainer.size = new-object System.Drawing.Size(($formWidth-30),($formHeight-310)) 
+    $objSplitContainer.size = new-object System.Drawing.Size(($formWidth-30),($formHeight-310))
     #$objSplitContainer.Dock = [Windows.Forms.DockStyle]::Bottom
     $objSplitContainer.SplitterWidth = 6
     $objSplitContainer.SplitterDistance = 200
@@ -966,7 +966,7 @@ if ($Mode -eq "SelectDelegationObject") {
     [void]$objADForm.ShowDialog()
 }
 #endregion
-    
+
 ######
 #### main UI starts here
 ######
@@ -994,7 +994,7 @@ if ($Mode -eq "SelectDelegationObject") {
 
         $objForm = New-Object System.Windows.Forms.Form
         $objForm.Text = $Title
-        $objForm.Size = New-Object System.Drawing.Size($width,$height) 
+        $objForm.Size = New-Object System.Drawing.Size($width,$height)
         #$objForm.AutoSize = $true
         $objForm.FormBorderStyle = "FixedDialog"
         $objForm.StartPosition = "CenterScreen"
@@ -1010,7 +1010,7 @@ if ($Mode -eq "SelectDelegationObject") {
     #region InputPanel
         $objInputPanel = New-Object System.Windows.Forms.Panel
         $objInputPanel.Location = new-object System.Drawing.Point(10,20)
-        $objInputPanel.size = new-object System.Drawing.Size($Panelwidth,$Panelheight) 
+        $objInputPanel.size = new-object System.Drawing.Size($Panelwidth,$Panelheight)
         #$objInputPanel.BackColor = "255,0,255"
         #$objInputPanel.BackColor = "Blue"
         $objInputPanel.Font = $FontStdt
@@ -1020,8 +1020,8 @@ if ($Mode -eq "SelectDelegationObject") {
 
     #region InputLabel3
         $objInputLabel3 = new-object System.Windows.Forms.Label
-        $objInputLabel3.Location = new-object System.Drawing.Point(10,10) 
-        $objInputLabel3.size = new-object System.Drawing.Size(170,30) 
+        $objInputLabel3.Location = new-object System.Drawing.Point(10,10)
+        $objInputLabel3.size = new-object System.Drawing.Size(170,30)
         $objInputLabel3.Font = $FontStdt
         $objInputLabel3.Text = "Currently configured delegations:"
         $objInputLabel3.AutoSize = $true
@@ -1031,7 +1031,7 @@ if ($Mode -eq "SelectDelegationObject") {
     #region Delegation SelectionList
         $objDelegationComboBox = New-Object System.Windows.Forms.ComboBox
         $objDelegationComboBox.Location  = New-Object System.Drawing.Point(10,80)
-        $objDelegationComboBox.size = new-object System.Drawing.Size(($Panelwidth-30),25) 
+        $objDelegationComboBox.size = new-object System.Drawing.Size(($Panelwidth-30),25)
         $objDelegationComboBox.Font = $FontStdt
         $objDelegationComboBox.AutoCompleteSource = 'ListItems'
         $objDelegationComboBox.AutoCompleteMode = 'SuggestAppend'
@@ -1067,8 +1067,8 @@ if ($Mode -eq "SelectDelegationObject") {
     #endregion
 
     #region delegation entry list
-        $objDelegationPrincipalListBox = New-Object System.Windows.Forms.DataGridView 
-        $objDelegationPrincipalListBox.Location = New-Object System.Drawing.Size(10,120) 
+        $objDelegationPrincipalListBox = New-Object System.Windows.Forms.DataGridView
+        $objDelegationPrincipalListBox.Location = New-Object System.Drawing.Size(10,120)
         $objDelegationPrincipalListBox.Size = New-Object System.Drawing.Size(($Panelwidth-20),150)
         $objDelegationPrincipalListBox.DefaultCellStyle.Font = "Microsoft Sans Serif, 9"
         $objDelegationPrincipalListBox.ColumnHeadersDefaultCellStyle.Font = "Microsoft Sans Serif, 9"
@@ -1104,8 +1104,8 @@ if ($Mode -eq "SelectDelegationObject") {
 
     #region Operation result text box
         $objResultTextBoxLabel = new-object System.Windows.Forms.Label
-        $objResultTextBoxLabel.Location = new-object System.Drawing.Point(10,($height-170)) 
-        $objResultTextBoxLabel.size = new-object System.Drawing.Size(100,25) 
+        $objResultTextBoxLabel.Location = new-object System.Drawing.Point(10,($height-170))
+        $objResultTextBoxLabel.size = new-object System.Drawing.Size(100,25)
         $objResultTextBoxLabel.Font = $FontStdt
         $objResultTextBoxLabel.Text = "Output log:"
         $objForm.Controls.Add($objResultTextBoxLabel)
@@ -1113,9 +1113,9 @@ if ($Mode -eq "SelectDelegationObject") {
         $objResultTextBox = New-Object System.Windows.Forms.TextBox
         $objResultTextBox.Location = New-Object System.Drawing.Point(10,($height-140))
         $objResultTextBox.Size = New-Object System.Drawing.Size(($width-200),80)
-        $objResultTextBox.ReadOnly = $true 
+        $objResultTextBox.ReadOnly = $true
         $objResultTextBox.Multiline = $true
-        $objResultTextBox.AcceptsReturn = $true 
+        $objResultTextBox.AcceptsReturn = $true
         $objResultTextBox.Font = $FontStdt
         $objResultTextBox.Text = ""
         $objForm.Controls.Add($objResultTextBox)
@@ -1227,16 +1227,16 @@ process {
                 $objResultTextBox.Text = ""
             }
         }
-    
+
     }
-    
+
     $CxtRetrieveMnuStrip1Item1.add_Click($ClickElementMenu)
     $CxtRetrieveMnuStrip1Item2.add_Click($ClickElementMenu)
     $CxtRetrieveMnuStrip1Item3.add_Click($ClickElementMenu)
 
     $objShowAllRB.Add_Click({
         $Script:DelegationFilter = "NoFilter"
-        
+
         #$objDelegationPrincipalListBox.Rows.Clear()
         Load-DelegationList
         Load-PrincipalList -DelegationEntry $objDelegationComboBox.SelectedIndex
@@ -1284,7 +1284,7 @@ process {
             $objResultTextBox.Text = "ERROR - adding failed!`r`nAD principal: $($result.AdPrincipalDNValue)`r`nDelegation object: $($result.DelegationDNValue)"
         } else {
             $objResultTextBox.Text = "Operation aborded..."
-        } 
+        }
         Start-Sleep 4
         $objResultTextBox.Text = ""
     })
@@ -1347,4 +1347,4 @@ Load-PrincipalList -DelegationEntry $objDelegationComboBox.SelectedIndex
 end {
 }
 
-    
+

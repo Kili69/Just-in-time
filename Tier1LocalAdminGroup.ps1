@@ -2,18 +2,18 @@
 Script Info
 
 Author: Andreas Lucas/Andreas Luy [MSFT]
-Download: 
+Download:
 
 Disclaimer:
-This sample script is not supported under any Microsoft standard support program or service. 
-The sample script is provided AS IS without warranty of any kind. Microsoft further disclaims 
-all implied warranties including, without limitation, any implied warranties of merchantability 
-or of fitness for a particular purpose. The entire risk arising out of the use or performance of 
-the sample scripts and documentation remains with you. In no event shall Microsoft, its authors, 
-or anyone else involved in the creation, production, or delivery of the scripts be liable for any 
-damages whatsoever (including, without limitation, damages for loss of business profits, business 
-interruption, loss of business information, or other pecuniary loss) arising out of the use of or 
-inability to use the sample scripts or documentation, even if Microsoft has been advised of the 
+This sample script is not supported under any Microsoft standard support program or service.
+The sample script is provided AS IS without warranty of any kind. Microsoft further disclaims
+all implied warranties including, without limitation, any implied warranties of merchantability
+or of fitness for a particular purpose. The entire risk arising out of the use or performance of
+the sample scripts and documentation remains with you. In no event shall Microsoft, its authors,
+or anyone else involved in the creation, production, or delivery of the scripts be liable for any
+damages whatsoever (including, without limitation, damages for loss of business profits, business
+interruption, loss of business information, or other pecuniary loss) arising out of the use of or
+inability to use the sample scripts or documentation, even if Microsoft has been advised of the
 possibility of such damages
 #
 #
@@ -21,10 +21,10 @@ possibility of such damages
     This script create and maintain the local administrator groups
 
 .DESCRIPTION
-    this script run in the context of a GroupManagedServiceAccount and create a domain local group for each 
+    this script run in the context of a GroupManagedServiceAccount and create a domain local group for each
     server in the Tier1 Management OU
 .PARAMETER configurationFile
-    The ful qualified path to the configuration file. If this parameter is not available the script 
+    The ful qualified path to the configuration file. If this parameter is not available the script
     will use the JIT.config will use the jit.config in the current directory
 
 .EXAMPLE
@@ -41,7 +41,7 @@ possibility of such damages
    none
 .NOTES
     Version Tracking
-    2021-10-12 
+    2021-10-12
     Version 0.1
         - First internal release
     Version 0.1.2021294
@@ -49,7 +49,7 @@ possibility of such damages
         - Added Event logging
     Version 0.1.20231113
         -exit code on error
-        -mulit domain-forest support 
+        -mulit domain-forest support
         -Domain DNS name on groups replaced with Domain NetBiosName
     Version 0.1.20231204
         - New Event 1004 if a OU doesn't exists
@@ -78,11 +78,11 @@ possibility of such damages
     1005 Information Server delegation has been updated
     1006 Error Server delegation could not be updated
     1007 Error delegation does not exist
-    1100 Error configuration file missing 
-    1101 Error invalid configuration file version 
+    1100 Error configuration file missing
+    1101 Error invalid configuration file version
     1110 Error delegation file hash mismatch
-    
-    exit code 
+
+    exit code
     0x3E8 configuratin file missing
     0x3E9 invalid configuration file version
     0x3EA malformed JSON file
@@ -143,8 +143,8 @@ function Write-LogFile {
     $LogLine = "$(Get-Date -Format o), [$Severity],[$eventRecordID], $Message"
     Add-Content -Path $LogFile -Value $LogLine -ErrorAction SilentlyContinue
     switch ($Severity) {
-        'Error'   { 
-            Write-Host $Message -ForegroundColor Red             
+        'Error'   {
+            Write-Host $Message -ForegroundColor Red
             Add-Content -Path $LogFile -Value $Error[0].ScriptStackTrace   -ErrorAction SilentlyContinue
         }
         'Warning' { Write-Host $Message -ForegroundColor Yellow}
@@ -153,12 +153,12 @@ function Write-LogFile {
 
 }
 
-function Get-DomainDNSfromDN 
+function Get-DomainDNSfromDN
 {
     param(
         [Parameter (Mandatory=$true)][string]$AdObjectDN
     )
-    $DomainDNS = (($AdObjectDN.tolower()).substring($AdObjectDN.tolower().IndexOf('dc=')+3).replace(“,dc=”,“.”))
+    $DomainDNS = (($AdObjectDN.tolower()).substring($AdObjectDN.tolower().IndexOf('dc=')+3).replace(',dc=','.'))
     return $DomainDNS
 }
 
@@ -184,7 +184,7 @@ if (Test-Path $LogFile){
 #endregion
 
 Write-ScriptLogMessage -Message "Tier1LocalAdminGroup & Delegation management process started (RequestID $eventRecordID). Detailed logging available $LogFile" -Severity Information #-EventID 2106
-Write-LogFile -Message "Script Version $_ScriptVersion. Minimum required config Version $MinConfigVersionBuild" -Severity Information 
+Write-LogFile -Message "Script Version $_ScriptVersion. Minimum required config Version $MinConfigVersionBuild" -Severity Information
 
 #region check for enabled and configured delegation
 $Delegation = @()
@@ -194,10 +194,10 @@ if ($global:config.EnableDelegation) {
 #endregion
 
 #region Group creation
-# In this region the AD groups will be created and users on existing groups will be 
+# In this region the AD groups will be created and users on existing groups will be
 # removed if they are permanent members
 #
-# if Multi-Domain Mode is enabled add all domains to the $aryDomainList otherwise add only 
+# if Multi-Domain Mode is enabled add all domains to the $aryDomainList otherwise add only
 # the current domain to the array
 $aryDomainList = @()
 if ($global:config.EnableMultiDomainSupport) {
@@ -213,14 +213,14 @@ $T1ServerList = @()
 #Region show progress activit init
 #This section is not mandatory. It is only required for the interactive execution of the script to show the progress
 $Starttime = Get-Date #Start time of the script to evaluate the runtime of the script
-$GroupCount = 0 #Initialize the over all counter of detected computer object 
+$GroupCount = 0 #Initialize the over all counter of detected computer object
 $Statuscounter = 0 #Initialize the counter a executed groups activites. THis could be creating the group or remove permanent objects from the group
 #endregion
 
 Foreach ($Domain in $aryDomainList) {
     #Working on every domain in the Forest
     Write-Debug "Working on Domain $Domain"
-    #The searchbase parameter defines the OU where the script is looking for computer objects. 
+    #The searchbase parameter defines the OU where the script is looking for computer objects.
     #if the value is <DomainRoot> the script searches in the entire domain from computer objects
     Foreach ($SearchBase in $global:config.T1Searchbase) {
         if ($SearchBase -notlike "*DC=*"){
@@ -233,7 +233,7 @@ Foreach ($Domain in $aryDomainList) {
         }
         #Validate the OU exists. It is not mandatory to have the same Tier 1 OU structure in all domains
         if ($SearchBase -like "*$((Get-ADDomain -Server $Domain).DistinguishedName)") {
-            #Search for computer object in the OU and based on the LDAP filter. 
+            #Search for computer object in the OU and based on the LDAP filter.
             #While the LDAP filter doesn't support DistinguishedNames, the query must work against the $searchbase
             #$serverList = Get-ADComputer -LDAPFilter $global:config.LDAPT1Computers -Properties memberof,groupPriority -SearchBase $Searchbase -Server $Domain | Where-Object { $_.DistinguishedName -notlike "*$($global:config.LDAPT0ComputerPath)*" }
             #$serverList = Get-ADComputer -LDAPFilter $global:config.LDAPT1Computers -Properties memberof -SearchBase $Searchbase -Server $Domain | Where-Object { $_.MemberOf -notlike "*$($global:config.Tier0ServerGroupName)*" }
@@ -257,7 +257,7 @@ Foreach ($Domain in $aryDomainList) {
                 $Statuscounter ++
                 #Show progress for interactive execution
                 Write-Progress -Activity "Group Management" -Status "groups completed $Statuscounter" -PercentComplete (($Statuscounter / $GroupCount) * 100)
-                #If MultiDomain Support is enabled the domain DNS name will be added 
+                #If MultiDomain Support is enabled the domain DNS name will be added
                 #between Admin-Prefix and the computer name
                 if ($global:config.EnableMultiDomainSupport) {
                     $GroupName = "$($global:config.AdminPrefix)$($DnsDomain)$($global:config.DomainSeparator)$($server.Name)"
@@ -266,10 +266,10 @@ Foreach ($Domain in $aryDomainList) {
                     $GroupName = "$($global:config.AdminPreFix)$($Server.Name)"
                 }
                 #Check the group already exists. If not create a new group otherwise check for the groupmembers
-                if (!([bool](Get-ADGroup -Filter { Name -eq $GroupName }))) {   
+                if (!([bool](Get-ADGroup -Filter { Name -eq $GroupName }))) {
                     #create the Tier 1 computer group objects if they don't exists
                     try {
-                        New-ADGroup -GroupCategory Security -GroupScope DomainLocal -SamAccountName $GroupName -Name $GroupName -Description "Provide Administrators privilege on $($Server.Name)" -Path $global:config.OU 
+                        New-ADGroup -GroupCategory Security -GroupScope DomainLocal -SamAccountName $GroupName -Name $GroupName -Description "Provide Administrators privilege on $($Server.Name)" -Path $global:config.OU
                         Write-EventLog -LogName $global:config.EventLog -Source $global:config.EventSource -EventId 1000 -Message "New Local admin group $GroupName created" -EntryType Information
                         Write-Output "New Local admin group $GroupName created"
                     }
@@ -280,7 +280,7 @@ Foreach ($Domain in $aryDomainList) {
                 }
                 else {
                     #remove any not timebombed object
-                    #If the member property doesn't contains a TTL remove them from the group 
+                    #If the member property doesn't contains a TTL remove them from the group
                     Foreach ($Member in (Get-ADGroup $GroupName -Property members -ShowMemberTimeToLive).members) {
                         Write-Debug "Removeing permanent users from $GroupName"
                         $Regex = [RegEx]::new("<TTL=\d*>,CN=.")
